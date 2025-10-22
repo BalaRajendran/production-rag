@@ -5,7 +5,7 @@ pydantic-settings==2.6.0
 python-dotenv==1.0.1
 
 # Vector DB
-qdrant-client==1.7.0
+qdrant-client==1.12.1
 
 # Embeddings & LLM
 openai==1.54.0

@@ -1,7 +1,7 @@
 from typing import List
 from openai import AsyncOpenAI
-from config import settings
-from models import Message, GeneratedQuery
+from ..core.config import settings
+from ..models.models import Message, GeneratedQuery
 import json
 
 

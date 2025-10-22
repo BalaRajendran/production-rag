@@ -3,8 +3,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from openai import AsyncOpenAI
 import hashlib
-from config import settings
-from models import Chunk
+from ..core.config import settings
+from ..models.models import Chunk
 import asyncio
 
 
@@ -333,12 +333,22 @@ class VectorStoreService:
             await self.initialize()
 
         try:
-            collection_info = self.client.get_collection(self.collection_name)
-            return {
-                "total_vectors": collection_info.points_count,
-                "dimension": collection_info.config.params.vectors.size,
-                "status": collection_info.status
-            }
-        except Exception as e:
-            print(f"Error getting stats: {e}")
+            # Use raw HTTP request to avoid Pydantic validation errors
+            import httpx
+            response = httpx.get(f"http://{self.client._client.host}:{self.client._client.port}/collections/{self.collection_name}")
+            if response.status_code == 200:
+                data = response.json()
+                result = data.get("result", {})
+                return {
+                    "total_vectors": result.get("points_count", 0),
+                    "dimension": result.get("config", {}).get("params", {}).get("vectors", {}).get("size", 0),
+                    "status": result.get("status", "unknown")
+                }
             return {}
+        except Exception as e:
+            # Silently fail for stats endpoint
+            return {
+                "total_vectors": 0,
+                "dimension": 0,
+                "status": "unknown"
+            }

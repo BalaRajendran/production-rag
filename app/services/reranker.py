@@ -1,7 +1,7 @@
 from typing import List
 import cohere
-from config import settings
-from models import Chunk, RerankedChunk
+from ..core.config import settings
+from ..models.models import Chunk, RerankedChunk
 
 
 class RerankingService:

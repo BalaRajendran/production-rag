@@ -3,13 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
-from config import settings
-from models import (
+from .core.config import settings
+from .models.models import (
     QueryRequest, QueryResponse,
     IndexRequest, IndexResponse,
     HealthResponse
 )
-from services.rag_service import RAGService
+from .services.rag_service import RAGService
 
 
 # Initialize RAG service
@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     """Initialize services on startup."""
     print("Initializing Production RAG Framework...")
     await rag_service.initialize()
-    print("RAG Framework ready!")
+    print("RAG Framework ready!!")
     yield
     print("Shutting down RAG Framework...")
 
@@ -95,7 +95,7 @@ async def query(request: QueryRequest):
     1. **Query Routing** - Determines the best way to handle the query
     2. **Query Generation** - Creates multiple query variants for better coverage
     3. **Parallel Retrieval** - Searches with all queries simultaneously
-    4. **Reranking** - Reranks results using Cohere (50 ’ 15 chunks)
+    4. **Reranking** - Reranks results using Cohere (50 â†’ 15 chunks)
     5. **Answer Generation** - Uses LLM to generate final answer with metadata
 
     Args:

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 import tiktoken
-from config import settings
+from ..core.config import settings
 
 
 class ChunkingService:

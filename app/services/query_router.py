@@ -1,7 +1,7 @@
 from typing import Tuple
 from openai import AsyncOpenAI
-from config import settings
-from models import QueryType
+from ..core.config import settings
+from ..models.models import QueryType
 import re
 
 
