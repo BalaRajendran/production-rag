@@ -6,7 +6,7 @@ Aggregates all v1 endpoint routers into a single router.
 
 from fastapi import APIRouter
 
-from .endpoints import health, rag, documents, monitoring
+from .endpoints import documents, health, monitoring, rag
 
 # Create v1 API router
 api_router = APIRouter()

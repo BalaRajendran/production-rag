@@ -6,7 +6,8 @@ secrets management, and feature flags.
 """
 
 from functools import lru_cache
-from typing import Optional, Literal
+from typing import Literal
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,10 +33,7 @@ class AppSettings(BaseSettings):
     cors_headers: list[str] = Field(default=["*"])
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="APP_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="APP_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -44,8 +42,8 @@ class LLMSettings(BaseSettings):
 
     # OpenAI Configuration
     openai_api_key: str
-    openai_base_url: Optional[str] = None
-    openai_organization: Optional[str] = None
+    openai_base_url: str | None = None
+    openai_organization: str | None = None
 
     # Model Configuration
     embedding_model: str = "text-embedding-3-large"
@@ -67,10 +65,7 @@ class LLMSettings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="LLM_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="LLM_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -80,7 +75,7 @@ class VectorDBSettings(BaseSettings):
     # Qdrant Configuration
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
-    qdrant_api_key: Optional[str] = None
+    qdrant_api_key: str | None = None
     qdrant_collection_name: str = "rag_collection"
     qdrant_timeout: int = 30
 
@@ -89,10 +84,7 @@ class VectorDBSettings(BaseSettings):
     distance_metric: Literal["cosine", "euclidean", "dot"] = "cosine"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="VECTOR_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="VECTOR_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -126,10 +118,7 @@ class RAGSettings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="RAG_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="RAG_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -147,19 +136,18 @@ class RateLimitSettings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
-    redis_password: Optional[str] = None
+    redis_password: str | None = None
     redis_ssl: bool = False
     redis_timeout: int = 5
 
     # Strategy
-    rate_limit_strategy: Literal["fixed-window", "sliding-window", "token-bucket"] = "sliding-window"
+    rate_limit_strategy: Literal["fixed-window", "sliding-window", "token-bucket"] = (
+        "sliding-window"
+    )
     rate_limit_key_prefix: str = "ratelimit"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="RATE_LIMIT_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="RATE_LIMIT_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -168,15 +156,15 @@ class ObservabilitySettings(BaseSettings):
 
     # Langfuse Configuration
     langfuse_enabled: bool = True
-    langfuse_public_key: Optional[str] = None
-    langfuse_secret_key: Optional[str] = None
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
     langfuse_host: str = "https://cloud.langfuse.com"
     langfuse_sample_rate: float = 1.0  # 1.0 = trace everything
 
     # Logging Configuration
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["json", "text", "console"] = "console"
-    log_file: Optional[str] = None
+    log_file: str | None = None
     log_rotation: str = "100 MB"
     log_retention: int = 30  # days
 
@@ -198,10 +186,7 @@ class ObservabilitySettings(BaseSettings):
         return v
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="OBS_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="OBS_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -220,10 +205,7 @@ class SecuritySettings(BaseSettings):
     enable_security_headers: bool = True
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="SECURITY_",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_prefix="SECURITY_", case_sensitive=False, extra="ignore"
     )
 
 
@@ -235,13 +217,13 @@ class Settings:
     """
 
     def __init__(self):
-        self._app: Optional[AppSettings] = None
-        self._llm: Optional[LLMSettings] = None
-        self._vector_db: Optional[VectorDBSettings] = None
-        self._rag: Optional[RAGSettings] = None
-        self._rate_limit: Optional[RateLimitSettings] = None
-        self._observability: Optional[ObservabilitySettings] = None
-        self._security: Optional[SecuritySettings] = None
+        self._app: AppSettings | None = None
+        self._llm: LLMSettings | None = None
+        self._vector_db: VectorDBSettings | None = None
+        self._rag: RAGSettings | None = None
+        self._rate_limit: RateLimitSettings | None = None
+        self._observability: ObservabilitySettings | None = None
+        self._security: SecuritySettings | None = None
 
     @property
     def app(self) -> AppSettings:
@@ -363,7 +345,7 @@ class Settings:
         self._security = None
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Get cached settings instance.

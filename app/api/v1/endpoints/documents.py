@@ -4,12 +4,13 @@ Document management endpoints.
 Provides CRUD operations for documents in the RAG system.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Dict, Any
+from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.api.deps import get_rag_service
 from app.core.logging import get_logger
 from app.models.models import IndexRequest, IndexResponse
-from app.api.deps import get_rag_service
 from app.services.rag_service import RAGService
 
 logger = get_logger(__name__)
@@ -22,11 +23,10 @@ router = APIRouter(tags=["Document Management"])
     response_model=IndexResponse,
     status_code=status.HTTP_200_OK,
     summary="Index documents",
-    description="Add documents to the RAG system with chunking and embedding"
+    description="Add documents to the RAG system with chunking and embedding",
 )
 async def index_documents(
-    request: IndexRequest,
-    rag_service: RAGService = Depends(get_rag_service)
+    request: IndexRequest, rag_service: RAGService = Depends(get_rag_service)
 ) -> IndexResponse:
     """
     Index documents into the RAG system.
@@ -69,31 +69,26 @@ async def index_documents(
 
         response = await rag_service.index_documents(request)
 
-        logger.info(
-            "Documents indexed successfully",
-            num_documents=len(request.documents)
-        )
+        logger.info("Documents indexed successfully", num_documents=len(request.documents))
 
         return response
 
     except Exception as e:
         logger.error("Document indexing failed", error=str(e))
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Indexing failed: {str(e)}"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Indexing failed: {e!s}"
+        ) from e
 
 
 @router.delete(
     "/documents/{document_id}",
     status_code=status.HTTP_200_OK,
     summary="Delete document",
-    description="Delete a document and all its chunks from the system"
+    description="Delete a document and all its chunks from the system",
 )
 async def delete_document(
-    document_id: str,
-    rag_service: RAGService = Depends(get_rag_service)
-) -> Dict[str, Any]:
+    document_id: str, rag_service: RAGService = Depends(get_rag_service)
+) -> dict[str, Any]:
     """
     Delete a document and all its chunks.
 
@@ -114,22 +109,17 @@ async def delete_document(
 
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {document_id} not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Document {document_id} not found"
             )
 
         logger.info("Document deleted successfully", document_id=document_id)
 
-        return {
-            "success": True,
-            "message": f"Document {document_id} deleted successfully"
-        }
+        return {"success": True, "message": f"Document {document_id} deleted successfully"}
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Document deletion failed", document_id=document_id, error=str(e))
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Deletion failed: {str(e)}"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Deletion failed: {e!s}"
+        ) from e

@@ -1,5 +1,5 @@
-from typing import List
 import cohere
+
 from ..core.config import settings
 from ..models.models import Chunk, RerankedChunk
 
@@ -19,11 +19,8 @@ class RerankingService:
         self.model = "rerank-english-v3.0"  # Cohere's latest reranker
 
     async def rerank(
-        self,
-        query: str,
-        chunks: List[Chunk],
-        top_k: int = None
-    ) -> List[RerankedChunk]:
+        self, query: str, chunks: list[Chunk], top_k: int | None = None
+    ) -> list[RerankedChunk]:
         """
         Rerank chunks based on relevance to query.
 
@@ -50,7 +47,7 @@ class RerankingService:
                 query=query,
                 documents=documents,
                 top_n=top_k,
-                return_documents=False  # We already have the documents
+                return_documents=False,  # We already have the documents
             )
 
             # Map reranked results back to chunks
@@ -58,16 +55,12 @@ class RerankingService:
             for result in response.results:
                 original_chunk = chunks[result.index]
                 reranked.append(
-                    RerankedChunk(
-                        chunk=original_chunk,
-                        rerank_score=result.relevance_score
-                    )
+                    RerankedChunk(chunk=original_chunk, rerank_score=result.relevance_score)
                 )
 
             return reranked
 
-        except Exception as e:
-            print(f"Error during reranking: {e}")
+        except Exception:
             # Fallback: return top chunks by original score
             sorted_chunks = sorted(chunks, key=lambda x: x.score, reverse=True)
             return [
@@ -76,11 +69,8 @@ class RerankingService:
             ]
 
     async def rerank_with_metadata(
-        self,
-        query: str,
-        chunks: List[Chunk],
-        top_k: int = None
-    ) -> List[RerankedChunk]:
+        self, query: str, chunks: list[Chunk], top_k: int | None = None
+    ) -> list[RerankedChunk]:
         """
         Rerank chunks considering both text and metadata.
 
@@ -107,23 +97,19 @@ class RerankingService:
                 query=query,
                 documents=enhanced_chunks,
                 top_n=top_k,
-                return_documents=False
+                return_documents=False,
             )
 
             reranked = []
             for result in response.results:
                 original_chunk = chunks[result.index]
                 reranked.append(
-                    RerankedChunk(
-                        chunk=original_chunk,
-                        rerank_score=result.relevance_score
-                    )
+                    RerankedChunk(chunk=original_chunk, rerank_score=result.relevance_score)
                 )
 
             return reranked
 
-        except Exception as e:
-            print(f"Error during reranking with metadata: {e}")
+        except Exception:
             sorted_chunks = sorted(chunks, key=lambda x: x.score, reverse=True)
             return [
                 RerankedChunk(chunk=chunk, rerank_score=chunk.score)

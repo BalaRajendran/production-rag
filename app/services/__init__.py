@@ -11,13 +11,13 @@ This package contains all the core services for the RAG system:
 - ChunkingService: Document chunking
 """
 
-from .rag_service import RAGService
-from .vector_store import VectorStoreService
-from .query_generation import QueryGenerationService
-from .reranker import RerankingService
-from .query_router import QueryRouter
-from .llm_service import LLMService
 from .chunking import ChunkingService
+from .llm_service import LLMService
+from .query_generation import QueryGenerationService
+from .query_router import QueryRouter
+from .rag_service import RAGService
+from .reranker import RerankingService
+from .vector_store import VectorStoreService
 
 __all__ = [
     "RAGService",

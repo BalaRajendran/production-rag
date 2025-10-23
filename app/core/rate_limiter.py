@@ -9,14 +9,13 @@ Provides distributed rate limiting with:
 """
 
 import time
-from typing import Optional, Dict, Tuple
-from datetime import datetime, timedelta
+
 import redis
 from redis.exceptions import RedisError
 
 from .config import get_settings
-from .logging import get_logger
 from .exceptions import RateLimitError
+from .logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -31,8 +30,8 @@ class RateLimiter:
 
     def __init__(self):
         self.settings = get_settings()
-        self._redis_client: Optional[redis.Redis] = None
-        self._in_memory_store: Dict[str, list] = {}  # Fallback storage
+        self._redis_client: redis.Redis | None = None
+        self._in_memory_store: dict[str, list] = {}  # Fallback storage
         self._redis_available = False
 
         if self.settings.rate_limit.redis_enabled:
@@ -55,10 +54,7 @@ class RateLimiter:
             self._redis_available = True
             logger.info("Redis connection established for rate limiting")
         except RedisError as e:
-            logger.warning(
-                "Redis connection failed, using in-memory rate limiting",
-                error=str(e)
-            )
+            logger.warning("Redis connection failed, using in-memory rate limiting", error=str(e))
             self._redis_available = False
             self._redis_client = None
 
@@ -68,11 +64,8 @@ class RateLimiter:
         return f"{prefix}:{identifier}:{window}"
 
     def _sliding_window_redis(
-        self,
-        identifier: str,
-        limit: int,
-        window_seconds: int
-    ) -> Tuple[bool, int, int]:
+        self, identifier: str, limit: int, window_seconds: int
+    ) -> tuple[bool, int, int]:
         """
         Sliding window rate limiting using Redis.
 
@@ -125,19 +118,13 @@ class RateLimiter:
             return allowed, remaining, retry_after
 
         except RedisError as e:
-            logger.warning(
-                "Redis error in rate limiter, falling back to memory",
-                error=str(e)
-            )
+            logger.warning("Redis error in rate limiter, falling back to memory", error=str(e))
             self._redis_available = False
             return self._sliding_window_memory(identifier, limit, window_seconds)
 
     def _sliding_window_memory(
-        self,
-        identifier: str,
-        limit: int,
-        window_seconds: int
-    ) -> Tuple[bool, int, int]:
+        self, identifier: str, limit: int, window_seconds: int
+    ) -> tuple[bool, int, int]:
         """
         In-memory sliding window rate limiting (fallback).
 
@@ -158,8 +145,7 @@ class RateLimiter:
 
         # Remove old requests
         self._in_memory_store[identifier] = [
-            ts for ts in self._in_memory_store[identifier]
-            if ts > window_start
+            ts for ts in self._in_memory_store[identifier] if ts > window_start
         ]
 
         # Count requests
@@ -182,11 +168,8 @@ class RateLimiter:
         return allowed, remaining, retry_after
 
     def check_rate_limit(
-        self,
-        identifier: str,
-        limit: Optional[int] = None,
-        window_seconds: Optional[int] = None
-    ) -> Dict[str, int]:
+        self, identifier: str, limit: int | None = None, window_seconds: int | None = None
+    ) -> dict[str, int]:
         """
         Check if request is within rate limit.
 
@@ -202,12 +185,7 @@ class RateLimiter:
             RateLimitError: If rate limit is exceeded
         """
         if not self.settings.rate_limit.rate_limit_enabled:
-            return {
-                "allowed": True,
-                "limit": 0,
-                "remaining": 999999,
-                "retry_after": 0
-            }
+            return {"allowed": True, "limit": 0, "remaining": 999999, "retry_after": 0}
 
         # Use defaults if not provided
         limit = limit or self.settings.rate_limit.rate_limit_per_minute
@@ -221,20 +199,17 @@ class RateLimiter:
             "allowed": allowed,
             "limit": limit,
             "remaining": remaining,
-            "retry_after": retry_after
+            "retry_after": retry_after,
         }
 
         if not allowed:
             logger.warning(
-                "Rate limit exceeded",
-                identifier=identifier,
-                limit=limit,
-                retry_after=retry_after
+                "Rate limit exceeded", identifier=identifier, limit=limit, retry_after=retry_after
             )
             raise RateLimitError(
                 message=f"Rate limit exceeded. Try again in {retry_after} seconds",
                 retry_after=retry_after,
-                details=rate_limit_info
+                details=rate_limit_info,
             )
 
         return rate_limit_info
@@ -261,7 +236,7 @@ class RateLimiter:
         if identifier in self._in_memory_store:
             del self._in_memory_store[identifier]
 
-    def get_stats(self, identifier: str) -> Dict[str, any]:
+    def get_stats(self, identifier: str) -> dict[str, any]:
         """
         Get rate limit statistics for an identifier.
 
@@ -287,7 +262,7 @@ class RateLimiter:
                     "current_usage": count,
                     "limit": self.settings.rate_limit.rate_limit_per_minute,
                     "window_seconds": window_seconds,
-                    "backend": "redis"
+                    "backend": "redis",
                 }
             except RedisError:
                 pass
@@ -304,7 +279,7 @@ class RateLimiter:
             "current_usage": count,
             "limit": self.settings.rate_limit.rate_limit_per_minute,
             "window_seconds": window_seconds,
-            "backend": "memory"
+            "backend": "memory",
         }
 
     def close(self) -> None:
@@ -318,7 +293,7 @@ class RateLimiter:
 
 
 # Global rate limiter instance
-_rate_limiter: Optional[RateLimiter] = None
+_rate_limiter: RateLimiter | None = None
 
 
 def get_rate_limiter() -> RateLimiter:

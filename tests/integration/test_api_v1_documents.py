@@ -17,12 +17,12 @@ class TestDocumentIndexing:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 5,
-            "message": "Successfully indexed 1 documents"
+            "message": "Successfully indexed 1 documents",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
@@ -32,13 +32,10 @@ class TestDocumentIndexing:
                     {
                         "id": "doc-1",
                         "content": "This is a test document about machine learning.",
-                        "metadata": {
-                            "title": "ML Intro",
-                            "author": "Test Author"
-                        }
+                        "metadata": {"title": "ML Intro", "author": "Test Author"},
                     }
                 ]
-            }
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -55,12 +52,12 @@ class TestDocumentIndexing:
             "success": True,
             "documents_processed": 3,
             "chunks_created": 15,
-            "message": "Successfully indexed 3 documents"
+            "message": "Successfully indexed 3 documents",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
@@ -70,11 +67,11 @@ class TestDocumentIndexing:
                     {
                         "id": f"doc-{i}",
                         "content": f"Document {i} content",
-                        "metadata": {"title": f"Doc {i}"}
+                        "metadata": {"title": f"Doc {i}"},
                     }
                     for i in range(3)
                 ]
-            }
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -89,12 +86,12 @@ class TestDocumentIndexing:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 10,
-            "message": "Successfully indexed 1 documents"
+            "message": "Successfully indexed 1 documents",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
@@ -111,11 +108,11 @@ class TestDocumentIndexing:
                             "category": "tutorial",
                             "tags": ["ml", "ai", "tutorial"],
                             "date": "2024-01-01",
-                            "version": "1.0"
-                        }
+                            "version": "1.0",
+                        },
                     }
                 ]
-            }
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -126,64 +123,42 @@ class TestDocumentIndexing:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 3,
-            "message": "Successfully indexed 1 documents"
+            "message": "Successfully indexed 1 documents",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
             "/api/v1/index",
             json={
-                "documents": [
-                    {
-                        "id": "doc-minimal",
-                        "content": "Minimal document",
-                        "metadata": {}
-                    }
-                ]
-            }
+                "documents": [{"id": "doc-minimal", "content": "Minimal document", "metadata": {}}]
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
 
     def test_index_validation_missing_documents(self, client):
         """Test validation when documents field is missing."""
-        response = client.post(
-            "/api/v1/index",
-            json={}
-        )
+        response = client.post("/api/v1/index", json={})
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_index_validation_empty_documents_list(self, client):
         """Test validation with empty documents list."""
-        response = client.post(
-            "/api/v1/index",
-            json={"documents": []}
-        )
+        response = client.post("/api/v1/index", json={"documents": []})
 
         # Should still process (though no actual indexing happens)
         # The service layer would handle this appropriately
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_422_UNPROCESSABLE_ENTITY
-        ]
+        assert response.status_code in [status.HTTP_200_OK, status.HTTP_422_UNPROCESSABLE_ENTITY]
 
     def test_index_validation_missing_document_id(self, client):
         """Test validation when document ID is missing."""
         response = client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "content": "Document without ID",
-                        "metadata": {}
-                    }
-                ]
-            }
+            json={"documents": [{"content": "Document without ID", "metadata": {}}]},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -191,15 +166,7 @@ class TestDocumentIndexing:
     def test_index_validation_missing_content(self, client):
         """Test validation when document content is missing."""
         response = client.post(
-            "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-no-content",
-                        "metadata": {}
-                    }
-                ]
-            }
+            "/api/v1/index", json={"documents": [{"id": "doc-no-content", "metadata": {}}]}
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -208,20 +175,12 @@ class TestDocumentIndexing:
         """Test error handling when indexing fails."""
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            side_effect=Exception("Vector store connection failed")
+            side_effect=Exception("Vector store connection failed"),
         )
 
         response = client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-1",
-                        "content": "Test",
-                        "metadata": {}
-                    }
-                ]
-            }
+            json={"documents": [{"id": "doc-1", "content": "Test", "metadata": {}}]},
         )
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -235,27 +194,19 @@ class TestDocumentIndexing:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 5,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         custom_id = "test-index-123"
         response = client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-1",
-                        "content": "Test",
-                        "metadata": {}
-                    }
-                ]
-            },
-            headers={"X-Correlation-ID": custom_id}
+            json={"documents": [{"id": "doc-1", "content": "Test", "metadata": {}}]},
+            headers={"X-Correlation-ID": custom_id},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -267,10 +218,7 @@ class TestDocumentDeletion:
 
     def test_delete_existing_document(self, client, mocker):
         """Test deleting an existing document."""
-        mocker.patch(
-            "app.services.rag_service.RAGService.delete_document",
-            return_value=True
-        )
+        mocker.patch("app.services.rag_service.RAGService.delete_document", return_value=True)
 
         response = client.delete("/api/v1/documents/doc-1")
 
@@ -283,10 +231,7 @@ class TestDocumentDeletion:
 
     def test_delete_nonexistent_document(self, client, mocker):
         """Test deleting a document that doesn't exist."""
-        mocker.patch(
-            "app.services.rag_service.RAGService.delete_document",
-            return_value=False
-        )
+        mocker.patch("app.services.rag_service.RAGService.delete_document", return_value=False)
 
         response = client.delete("/api/v1/documents/nonexistent-doc")
 
@@ -297,10 +242,7 @@ class TestDocumentDeletion:
 
     def test_delete_with_special_characters_in_id(self, client, mocker):
         """Test deleting document with special characters in ID."""
-        mocker.patch(
-            "app.services.rag_service.RAGService.delete_document",
-            return_value=True
-        )
+        mocker.patch("app.services.rag_service.RAGService.delete_document", return_value=True)
 
         doc_id = "doc-123_special-chars.pdf"
         response = client.delete(f"/api/v1/documents/{doc_id}")
@@ -311,7 +253,7 @@ class TestDocumentDeletion:
         """Test error handling when deletion fails."""
         mocker.patch(
             "app.services.rag_service.RAGService.delete_document",
-            side_effect=Exception("Database connection error")
+            side_effect=Exception("Database connection error"),
         )
 
         response = client.delete("/api/v1/documents/doc-1")
@@ -323,16 +265,10 @@ class TestDocumentDeletion:
 
     def test_delete_response_includes_correlation_id(self, client, mocker):
         """Test that delete responses include correlation ID."""
-        mocker.patch(
-            "app.services.rag_service.RAGService.delete_document",
-            return_value=True
-        )
+        mocker.patch("app.services.rag_service.RAGService.delete_document", return_value=True)
 
         custom_id = "test-delete-123"
-        response = client.delete(
-            "/api/v1/documents/doc-1",
-            headers={"X-Correlation-ID": custom_id}
-        )
+        response = client.delete("/api/v1/documents/doc-1", headers={"X-Correlation-ID": custom_id})
 
         assert response.status_code == status.HTTP_200_OK
         assert response.headers["X-Correlation-ID"] == custom_id
@@ -349,25 +285,17 @@ class TestDocumentEndpointsLogging:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 5,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-1",
-                        "content": "Test",
-                        "metadata": {}
-                    }
-                ]
-            }
+            json={"documents": [{"id": "doc-1", "content": "Test", "metadata": {}}]},
         )
 
         # Should log indexing operation
@@ -377,10 +305,7 @@ class TestDocumentEndpointsLogging:
         """Test that deletion operations are logged."""
         mock_logger = mocker.patch("app.api.v1.endpoints.documents.logger")
 
-        mocker.patch(
-            "app.services.rag_service.RAGService.delete_document",
-            return_value=True
-        )
+        mocker.patch("app.services.rag_service.RAGService.delete_document", return_value=True)
 
         client.delete("/api/v1/documents/doc-1")
 
@@ -393,20 +318,12 @@ class TestDocumentEndpointsLogging:
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            side_effect=Exception("Test error")
+            side_effect=Exception("Test error"),
         )
 
         client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-1",
-                        "content": "Test",
-                        "metadata": {}
-                    }
-                ]
-            }
+            json={"documents": [{"id": "doc-1", "content": "Test", "metadata": {}}]},
         )
 
         # Should log error
@@ -424,25 +341,17 @@ class TestDocumentEndpointsEdgeCases:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 50,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-long",
-                        "content": long_content,
-                        "metadata": {}
-                    }
-                ]
-            }
+            json={"documents": [{"id": "doc-long", "content": long_content, "metadata": {}}]},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -453,12 +362,12 @@ class TestDocumentEndpointsEdgeCases:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 3,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
@@ -468,10 +377,10 @@ class TestDocumentEndpointsEdgeCases:
                     {
                         "id": "doc-unicode",
                         "content": "Document with emoji 🚀 and special chars: ñáéíóú",
-                        "metadata": {"title": "Unicode Test 中文"}
+                        "metadata": {"title": "Unicode Test 中文"},
                     }
                 ]
-            }
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -482,37 +391,29 @@ class TestDocumentEndpointsEdgeCases:
             "success": True,
             "documents_processed": 2,
             "chunks_created": 10,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
             "/api/v1/index",
             json={
                 "documents": [
-                    {
-                        "id": "doc-1",
-                        "content": "First version",
-                        "metadata": {}
-                    },
-                    {
-                        "id": "doc-1",
-                        "content": "Second version",
-                        "metadata": {}
-                    }
+                    {"id": "doc-1", "content": "First version", "metadata": {}},
+                    {"id": "doc-1", "content": "Second version", "metadata": {}},
                 ]
-            }
+            },
         )
 
         # Should succeed (service layer handles duplicates)
         assert response.status_code == status.HTTP_200_OK
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestDocumentEndpointsIntegrationScenarios:
     """Integration scenarios for document endpoints."""
 
@@ -523,35 +424,26 @@ class TestDocumentEndpointsIntegrationScenarios:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 5,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_index_response)
+            return_value=mocker.Mock(**mock_index_response),
         )
 
         # Index document
         index_response = client.post(
             "/api/v1/index",
             json={
-                "documents": [
-                    {
-                        "id": "doc-workflow",
-                        "content": "Test document",
-                        "metadata": {}
-                    }
-                ]
-            }
+                "documents": [{"id": "doc-workflow", "content": "Test document", "metadata": {}}]
+            },
         )
 
         assert index_response.status_code == status.HTTP_200_OK
 
         # Mock deletion
-        mocker.patch(
-            "app.services.rag_service.RAGService.delete_document",
-            return_value=True
-        )
+        mocker.patch("app.services.rag_service.RAGService.delete_document", return_value=True)
 
         # Delete document
         delete_response = client.delete("/api/v1/documents/doc-workflow")
@@ -564,25 +456,17 @@ class TestDocumentEndpointsIntegrationScenarios:
             "success": True,
             "documents_processed": 1,
             "chunks_created": 5,
-            "message": "Success"
+            "message": "Success",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
             "/api/v1/index",
-            json={
-                "documents": [
-                    {
-                        "id": "doc-1",
-                        "content": "Test",
-                        "metadata": {}
-                    }
-                ]
-            }
+            json={"documents": [{"id": "doc-1", "content": "Test", "metadata": {}}]},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -597,12 +481,12 @@ class TestDocumentEndpointsIntegrationScenarios:
             "success": True,
             "documents_processed": num_docs,
             "chunks_created": num_docs * 5,
-            "message": f"Successfully indexed {num_docs} documents"
+            "message": f"Successfully indexed {num_docs} documents",
         }
 
         mocker.patch(
             "app.services.rag_service.RAGService.index_documents",
-            return_value=mocker.Mock(**mock_response)
+            return_value=mocker.Mock(**mock_response),
         )
 
         response = client.post(
@@ -612,11 +496,11 @@ class TestDocumentEndpointsIntegrationScenarios:
                     {
                         "id": f"doc-{i}",
                         "content": f"Document {i} content with some text",
-                        "metadata": {"index": i}
+                        "metadata": {"index": i},
                     }
                     for i in range(num_docs)
                 ]
-            }
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK

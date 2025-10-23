@@ -1,14 +1,12 @@
-from typing import List, Dict, Any
-from ..models.models import (
-    QueryRequest, QueryResponse, Chunk, QueryType,
-    GeneratedQuery, IndexRequest, IndexResponse, Document
-)
-from .vector_store import VectorStoreService
-from .query_generation import QueryGenerationService
-from .reranker import RerankingService
-from .query_router import QueryRouter
-from .llm_service import LLMService
+from typing import Any
+
+from ..models.models import IndexRequest, IndexResponse, QueryRequest, QueryResponse, QueryType
 from .chunking import ChunkingService
+from .llm_service import LLMService
+from .query_generation import QueryGenerationService
+from .query_router import QueryRouter
+from .reranker import RerankingService
+from .vector_store import VectorStoreService
 
 
 class RAGService:
@@ -53,20 +51,16 @@ class RAGService:
             Query response with answer and sources
         """
         # Step 1: Route query
-        query_type, routing_explanation = await self.query_router.route_query(
-            request.query
-        )
-
-        print(f"Query routed to: {query_type} - {routing_explanation}")
+        query_type, routing_explanation = await self.query_router.route_query(request.query)
 
         # Handle non-RAG queries
         if query_type == QueryType.SUMMARIZATION:
             return await self._handle_summarization(request)
 
-        elif query_type == QueryType.METADATA_QUERY:
+        if query_type == QueryType.METADATA_QUERY:
             return await self._handle_metadata_query(request)
 
-        elif query_type == QueryType.GENERAL:
+        if query_type == QueryType.GENERAL:
             return await self._handle_general_query(request)
 
         # Handle RAG query
@@ -78,22 +72,15 @@ class RAGService:
         """
         # Step 2: Generate multiple query variants
         generated_queries = await self.query_generator.generate_queries(
-            request.query,
-            request.conversation_history
+            request.query, request.conversation_history
         )
-
-        print(f"Generated {len(generated_queries)} query variants")
 
         # Step 3: Search with all queries in parallel
         query_strings = [gq.query for gq in generated_queries]
 
         chunks = await self.vector_store.search_multiple_queries(
-            queries=query_strings,
-            top_k=request.top_k,
-            metadata_filter=request.metadata_filter
+            queries=query_strings, top_k=request.top_k, metadata_filter=request.metadata_filter
         )
-
-        print(f"Retrieved {len(chunks)} chunks before reranking")
 
         if not chunks:
             return QueryResponse(
@@ -101,17 +88,13 @@ class RAGService:
                 chunks=[],
                 generated_queries=generated_queries,
                 query_type=QueryType.RAG,
-                metadata={"message": "No chunks found"}
+                metadata={"message": "No chunks found"},
             )
 
         # Step 4: Rerank chunks
         reranked = await self.reranker.rerank_with_metadata(
-            query=request.query,
-            chunks=chunks,
-            top_k=request.top_k
+            query=request.query, chunks=chunks, top_k=request.top_k
         )
-
-        print(f"Reranked to {len(reranked)} chunks")
 
         # Extract chunks from reranked results
         final_chunks = [r.chunk for r in reranked]
@@ -120,7 +103,7 @@ class RAGService:
         answer = await self.llm.generate_answer(
             query=request.query,
             chunks=final_chunks,
-            conversation_history=request.conversation_history
+            conversation_history=request.conversation_history,
         )
 
         return QueryResponse(
@@ -130,14 +113,11 @@ class RAGService:
             query_type=QueryType.RAG,
             metadata={
                 "chunks_before_rerank": len(chunks),
-                "chunks_after_rerank": len(final_chunks)
-            }
+                "chunks_after_rerank": len(final_chunks),
+            },
         )
 
-    async def _handle_summarization(
-        self,
-        request: QueryRequest
-    ) -> QueryResponse:
+    async def _handle_summarization(self, request: QueryRequest) -> QueryResponse:
         """
         Handle summarization queries.
 
@@ -145,8 +125,7 @@ class RAGService:
         """
         # Search for relevant content
         chunks = await self.vector_store.search(
-            query=request.query,
-            top_k=10  # Get more chunks for summarization
+            query=request.query, top_k=10  # Get more chunks for summarization
         )
 
         if not chunks:
@@ -155,30 +134,24 @@ class RAGService:
                 chunks=[],
                 generated_queries=[],
                 query_type=QueryType.SUMMARIZATION,
-                metadata={"message": "No content found"}
+                metadata={"message": "No content found"},
             )
 
         # Combine chunk text
         content = "\n\n".join([chunk.text for chunk in chunks])
 
         # Generate summary
-        answer = await self.llm.generate_summarization(
-            content=content,
-            instruction=request.query
-        )
+        answer = await self.llm.generate_summarization(content=content, instruction=request.query)
 
         return QueryResponse(
             answer=answer,
             chunks=chunks,
             generated_queries=[],
             query_type=QueryType.SUMMARIZATION,
-            metadata={"chunks_used": len(chunks)}
+            metadata={"chunks_used": len(chunks)},
         )
 
-    async def _handle_metadata_query(
-        self,
-        request: QueryRequest
-    ) -> QueryResponse:
+    async def _handle_metadata_query(self, request: QueryRequest) -> QueryResponse:
         """
         Handle metadata queries (author, date, etc.).
 
@@ -186,8 +159,7 @@ class RAGService:
         """
         # Search for relevant documents
         chunks = await self.vector_store.search(
-            query=request.query,
-            top_k=20  # Get more for metadata queries
+            query=request.query, top_k=20  # Get more for metadata queries
         )
 
         if not chunks:
@@ -196,27 +168,21 @@ class RAGService:
                 chunks=[],
                 generated_queries=[],
                 query_type=QueryType.METADATA_QUERY,
-                metadata={"message": "No documents found"}
+                metadata={"message": "No documents found"},
             )
 
         # Generate answer based on metadata
-        answer = await self.llm.answer_metadata_query(
-            query=request.query,
-            chunks=chunks
-        )
+        answer = await self.llm.answer_metadata_query(query=request.query, chunks=chunks)
 
         return QueryResponse(
             answer=answer,
             chunks=chunks[:5],  # Return fewer chunks
             generated_queries=[],
             query_type=QueryType.METADATA_QUERY,
-            metadata={"documents_analyzed": len(chunks)}
+            metadata={"documents_analyzed": len(chunks)},
         )
 
-    async def _handle_general_query(
-        self,
-        request: QueryRequest
-    ) -> QueryResponse:
+    async def _handle_general_query(self, request: QueryRequest) -> QueryResponse:
         """
         Handle general conversational queries.
         """
@@ -224,16 +190,13 @@ class RAGService:
         messages = []
         if request.conversation_history:
             messages = [
-                {"role": msg.role, "content": msg.content}
-                for msg in request.conversation_history
+                {"role": msg.role, "content": msg.content} for msg in request.conversation_history
             ]
 
         messages.append({"role": "user", "content": request.query})
 
         answer = await self.llm.generate_answer(
-            query=request.query,
-            chunks=[],
-            conversation_history=request.conversation_history
+            query=request.query, chunks=[], conversation_history=request.conversation_history
         )
 
         return QueryResponse(
@@ -241,14 +204,10 @@ class RAGService:
             chunks=[],
             generated_queries=[],
             query_type=QueryType.GENERAL,
-            metadata={"message": "General conversation"}
+            metadata={"message": "General conversation"},
         )
 
-    async def index_documents(
-        self,
-        request: IndexRequest,
-        namespace: str = ""
-    ) -> IndexResponse:
+    async def index_documents(self, request: IndexRequest, namespace: str = "") -> IndexResponse:
         """
         Index documents into vector database.
 
@@ -270,8 +229,7 @@ class RAGService:
             for document in request.documents:
                 # Chunk document with metadata injection
                 chunks = self.chunker.chunk_with_metadata_injection(
-                    text=document.content,
-                    metadata=document.metadata
+                    text=document.content, metadata=document.metadata
                 )
 
                 if not chunks:
@@ -279,39 +237,30 @@ class RAGService:
 
                 # Index chunks
                 chunks_indexed = await self.vector_store.index_chunks(
-                    chunks=chunks,
-                    document_id=document.id,
-                    namespace=namespace
+                    chunks=chunks, document_id=document.id, namespace=namespace
                 )
 
                 total_chunks += chunks_indexed
-
-                print(f"Indexed {chunks_indexed} chunks for document {document.id}")
 
             return IndexResponse(
                 success=True,
                 documents_processed=len(request.documents),
                 chunks_created=total_chunks,
-                message=f"Successfully indexed {len(request.documents)} documents"
+                message=f"Successfully indexed {len(request.documents)} documents",
             )
 
         except Exception as e:
-            print(f"Error indexing documents: {e}")
             return IndexResponse(
                 success=False,
                 documents_processed=0,
                 chunks_created=0,
-                message=f"Error indexing documents: {str(e)}"
+                message=f"Error indexing documents: {e!s}",
             )
 
-    async def delete_document(
-        self,
-        document_id: str,
-        namespace: str = ""
-    ) -> bool:
+    async def delete_document(self, document_id: str, namespace: str = "") -> bool:
         """Delete document and all its chunks."""
         return await self.vector_store.delete_document(document_id, namespace)
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get vector store statistics."""
         return await self.vector_store.get_stats()

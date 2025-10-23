@@ -23,24 +23,20 @@ class TestRAGQueryEndpoint:
                     "id": "chunk-1",
                     "text": "Regular exercise improves heart health",
                     "score": 0.95,
-                    "metadata": {"source": "health-guide.pdf"}
+                    "metadata": {"source": "health-guide.pdf"},
                 }
             ],
-            "generated_queries": [
-                {"query": "benefits of exercise", "query_type": "semantic"}
-            ],
+            "generated_queries": [{"query": "benefits of exercise", "query_type": "semantic"}],
             "query_type": QueryType.RAG,
-            "metadata": {"num_queries": 1}
+            "metadata": {"num_queries": 1},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
         response = client.post(
-            "/api/v1/query",
-            json={"query": "What are the benefits of exercise?"}
+            "/api/v1/query", json={"query": "What are the benefits of exercise?"}
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -61,17 +57,16 @@ class TestRAGQueryEndpoint:
                     "id": "chunk-2",
                     "text": "Exercise reduces stress and anxiety",
                     "score": 0.92,
-                    "metadata": {}
+                    "metadata": {},
                 }
             ],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
         response = client.post(
@@ -80,9 +75,9 @@ class TestRAGQueryEndpoint:
                 "query": "What about mental health benefits?",
                 "conversation_history": [
                     {"role": "user", "content": "Tell me about exercise"},
-                    {"role": "assistant", "content": "Exercise is great for health"}
-                ]
-            }
+                    {"role": "assistant", "content": "Exercise is great for health"},
+                ],
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -98,27 +93,20 @@ class TestRAGQueryEndpoint:
                     "id": f"chunk-{i}",
                     "text": f"Content {i}",
                     "score": 0.9 - (i * 0.1),
-                    "metadata": {}
+                    "metadata": {},
                 }
                 for i in range(5)
             ],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={
-                "query": "Test query",
-                "top_k": 5
-            }
-        )
+        response = client.post("/api/v1/query", json={"query": "Test query", "top_k": 5})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -133,25 +121,21 @@ class TestRAGQueryEndpoint:
                     "id": "chunk-1",
                     "text": "Relevant content",
                     "score": 0.95,
-                    "metadata": {"source": "specific-doc.pdf"}
+                    "metadata": {"source": "specific-doc.pdf"},
                 }
             ],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
         response = client.post(
             "/api/v1/query",
-            json={
-                "query": "Test query",
-                "metadata_filter": {"source": "specific-doc.pdf"}
-            }
+            json={"query": "Test query", "metadata_filter": {"source": "specific-doc.pdf"}},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -160,20 +144,14 @@ class TestRAGQueryEndpoint:
 
     def test_query_validation_empty_query(self, client):
         """Test validation for empty query."""
-        response = client.post(
-            "/api/v1/query",
-            json={"query": ""}
-        )
+        response = client.post("/api/v1/query", json={"query": ""})
 
         # FastAPI/Pydantic validation should catch this
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_query_validation_missing_query(self, client):
         """Test validation when query field is missing."""
-        response = client.post(
-            "/api/v1/query",
-            json={}
-        )
+        response = client.post("/api/v1/query", json={})
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -182,13 +160,10 @@ class TestRAGQueryEndpoint:
         # Mock service to raise exception
         mocker.patch(
             "app.services.rag_service.RAGService.query",
-            side_effect=Exception("Vector store connection failed")
+            side_effect=Exception("Vector store connection failed"),
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test query"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test query"})
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         data = response.json()
@@ -202,19 +177,16 @@ class TestRAGQueryEndpoint:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
         custom_id = "test-rag-query-123"
         response = client.post(
-            "/api/v1/query",
-            json={"query": "Test"},
-            headers={"X-Correlation-ID": custom_id}
+            "/api/v1/query", json={"query": "Test"}, headers={"X-Correlation-ID": custom_id}
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -227,18 +199,14 @@ class TestRAGQueryEndpoint:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test"})
 
         assert response.status_code == status.HTTP_200_OK
         assert "X-Process-Time" in response.headers
@@ -256,8 +224,7 @@ class TestRAGQueryObservability:
         mock_obs_manager.create_trace.return_value = mock_trace
 
         mocker.patch(
-            "app.api.v1.endpoints.rag.get_observability_manager",
-            return_value=mock_obs_manager
+            "app.api.v1.endpoints.rag.get_observability_manager", return_value=mock_obs_manager
         )
 
         mock_response = {
@@ -265,18 +232,14 @@ class TestRAGQueryObservability:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test query"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test query"})
 
         assert response.status_code == status.HTTP_200_OK
         # Verify trace was created
@@ -288,8 +251,7 @@ class TestRAGQueryObservability:
         mock_obs_manager.is_enabled.return_value = False
 
         mocker.patch(
-            "app.api.v1.endpoints.rag.get_observability_manager",
-            return_value=mock_obs_manager
+            "app.api.v1.endpoints.rag.get_observability_manager", return_value=mock_obs_manager
         )
 
         mock_response = {
@@ -297,18 +259,14 @@ class TestRAGQueryObservability:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test query"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test query"})
 
         assert response.status_code == status.HTTP_200_OK
         # Trace should not be created when disabled
@@ -323,29 +281,18 @@ class TestRAGQueryResponseStructure:
         mock_response = {
             "answer": "Complete answer",
             "chunks": [
-                {
-                    "id": "chunk-1",
-                    "text": "Content",
-                    "score": 0.9,
-                    "metadata": {"key": "value"}
-                }
+                {"id": "chunk-1", "text": "Content", "score": 0.9, "metadata": {"key": "value"}}
             ],
-            "generated_queries": [
-                {"query": "variant 1", "query_type": "semantic"}
-            ],
+            "generated_queries": [{"query": "variant 1", "query_type": "semantic"}],
             "query_type": QueryType.RAG,
-            "metadata": {"processing_time": 1.5}
+            "metadata": {"processing_time": 1.5},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test"})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -368,26 +315,19 @@ class TestRAGQueryResponseStructure:
                     "id": "test-chunk-1",
                     "text": "This is chunk content",
                     "score": 0.95,
-                    "metadata": {
-                        "source": "doc.pdf",
-                        "page": 1
-                    }
+                    "metadata": {"source": "doc.pdf", "page": 1},
                 }
             ],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test"})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -408,18 +348,15 @@ class TestRAGQueryResponseStructure:
                 "chunks": [],
                 "generated_queries": [],
                 "query_type": query_type,
-                "metadata": {}
+                "metadata": {},
             }
 
             mocker.patch(
                 "app.services.rag_service.RAGService.query",
-                return_value=mocker.Mock(**mock_response)
+                return_value=mocker.Mock(**mock_response),
             )
 
-            response = client.post(
-                "/api/v1/query",
-                json={"query": "Test"}
-            )
+            response = client.post("/api/v1/query", json={"query": "Test"})
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()
@@ -438,18 +375,14 @@ class TestRAGQueryEdgeCases:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": long_query}
-        )
+        response = client.post("/api/v1/query", json={"query": long_query})
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -462,18 +395,14 @@ class TestRAGQueryEdgeCases:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": special_query}
-        )
+        response = client.post("/api/v1/query", json={"query": special_query})
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -484,21 +413,14 @@ class TestRAGQueryEdgeCases:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={
-                "query": "Test",
-                "conversation_history": []
-            }
-        )
+        response = client.post("/api/v1/query", json={"query": "Test", "conversation_history": []})
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -509,18 +431,14 @@ class TestRAGQueryEdgeCases:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.GENERAL,
-            "metadata": {"reason": "no_relevant_chunks"}
+            "metadata": {"reason": "no_relevant_chunks"},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Obscure topic"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Obscure topic"})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -540,18 +458,14 @@ class TestRAGQueryLogging:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        client.post(
-            "/api/v1/query",
-            json={"query": "Test query"}
-        )
+        client.post("/api/v1/query", json={"query": "Test query"})
 
         # Should log query processing
         assert mock_logger.info.called
@@ -561,20 +475,16 @@ class TestRAGQueryLogging:
         mock_logger = mocker.patch("app.api.v1.endpoints.rag.logger")
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            side_effect=Exception("Test error")
+            "app.services.rag_service.RAGService.query", side_effect=Exception("Test error")
         )
 
-        client.post(
-            "/api/v1/query",
-            json={"query": "Test"}
-        )
+        client.post("/api/v1/query", json={"query": "Test"})
 
         # Should log error
         mock_logger.error.assert_called()
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestRAGQueryIntegrationScenarios:
     """Integration scenarios testing RAG query with middleware."""
 
@@ -585,18 +495,14 @@ class TestRAGQueryIntegrationScenarios:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test"})
 
         assert response.status_code == status.HTTP_200_OK
         # Rate limit headers should be present
@@ -612,19 +518,15 @@ class TestRAGQueryIntegrationScenarios:
             "chunks": [],
             "generated_queries": [],
             "query_type": QueryType.RAG,
-            "metadata": {}
+            "metadata": {},
         }
 
         mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            return_value=mocker.Mock(**mock_response)
+            "app.services.rag_service.RAGService.query", return_value=mocker.Mock(**mock_response)
         )
 
         def make_query(i):
-            return client.post(
-                "/api/v1/query",
-                json={"query": f"Query {i}"}
-            )
+            return client.post("/api/v1/query", json={"query": f"Query {i}"})
 
         # Make 5 concurrent queries
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -638,7 +540,7 @@ class TestRAGQueryIntegrationScenarios:
         correlation_ids = [r.headers["X-Correlation-ID"] for r in responses]
         assert len(set(correlation_ids)) == len(correlation_ids)
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_query_timeout_handling(self, client, mocker):
         """Test handling of query timeouts."""
         import time
@@ -651,18 +553,12 @@ class TestRAGQueryIntegrationScenarios:
                 chunks=[],
                 generated_queries=[],
                 query_type=QueryType.RAG,
-                metadata={}
+                metadata={},
             )
 
-        mocker.patch(
-            "app.services.rag_service.RAGService.query",
-            side_effect=slow_query
-        )
+        mocker.patch("app.services.rag_service.RAGService.query", side_effect=slow_query)
 
-        response = client.post(
-            "/api/v1/query",
-            json={"query": "Test"}
-        )
+        response = client.post("/api/v1/query", json={"query": "Test"})
 
         # Should still succeed but with higher process time
         assert response.status_code == status.HTTP_200_OK

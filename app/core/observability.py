@@ -8,12 +8,10 @@ Provides optional LLM observability with:
 - Graceful fallback when not configured
 """
 
-from typing import Optional, Dict, Any, List
-from contextlib import contextmanager
-from datetime import datetime
+from typing import Any
 
 from .config import get_settings
-from .logging import get_logger, get_correlation_id
+from .logging import get_correlation_id, get_logger
 
 logger = get_logger(__name__)
 
@@ -23,6 +21,7 @@ Langfuse = None
 
 try:
     from langfuse import Langfuse as LangfuseClient
+
     Langfuse = LangfuseClient
     LANGFUSE_AVAILABLE = True
 except ImportError:
@@ -39,7 +38,7 @@ class ObservabilityManager:
 
     def __init__(self):
         self.settings = get_settings()
-        self._langfuse_client: Optional[Any] = None
+        self._langfuse_client: Any | None = None
         self._enabled = False
 
         if LANGFUSE_AVAILABLE and self.settings.observability.langfuse_enabled:
@@ -47,8 +46,10 @@ class ObservabilityManager:
 
     def _initialize_langfuse(self) -> None:
         """Initialize Langfuse client if credentials are provided."""
-        if not self.settings.observability.langfuse_public_key or \
-           not self.settings.observability.langfuse_secret_key:
+        if (
+            not self.settings.observability.langfuse_public_key
+            or not self.settings.observability.langfuse_secret_key
+        ):
             logger.info("Langfuse credentials not provided. Observability disabled.")
             return
 
@@ -77,9 +78,10 @@ class ObservabilityManager:
         if not self._enabled:
             return False
         import random
+
         return random.random() < self.settings.observability.langfuse_sample_rate
 
-    def create_trace(self, name: str, metadata: Optional[Dict[str, Any]] = None) -> Optional[Any]:
+    def create_trace(self, name: str, metadata: dict[str, Any] | None = None) -> Any | None:
         """
         Create a trace for tracking.
 
@@ -99,12 +101,9 @@ class ObservabilityManager:
             if correlation_id:
                 trace_metadata["correlation_id"] = correlation_id
 
-            trace = self._langfuse_client.trace(
-                name=name,
-                metadata=trace_metadata,
-                session_id=correlation_id
+            return self._langfuse_client.trace(
+                name=name, metadata=trace_metadata, session_id=correlation_id
             )
-            return trace
         except Exception as e:
             logger.error("Error creating trace", error=str(e))
             return None
@@ -112,9 +111,9 @@ class ObservabilityManager:
     def log_event(
         self,
         name: str,
-        metadata: Optional[Dict[str, Any]] = None,
-        input_data: Optional[Any] = None,
-        output_data: Optional[Any] = None
+        metadata: dict[str, Any] | None = None,
+        input_data: Any | None = None,
+        output_data: Any | None = None,
     ) -> None:
         """
         Log an event (simplified tracking).
@@ -133,7 +132,7 @@ class ObservabilityManager:
                 f"Observability event: {name}",
                 metadata=metadata,
                 input_sample=str(input_data)[:100] if input_data else None,
-                output_sample=str(output_data)[:100] if output_data else None
+                output_sample=str(output_data)[:100] if output_data else None,
             )
         except Exception as e:
             logger.error("Error logging event", name=name, error=str(e))
@@ -157,7 +156,7 @@ class ObservabilityManager:
 
 
 # Global observability manager instance
-_obs_manager: Optional[ObservabilityManager] = None
+_obs_manager: ObservabilityManager | None = None
 
 
 def get_observability_manager() -> ObservabilityManager:

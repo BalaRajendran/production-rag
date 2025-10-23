@@ -8,8 +8,8 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.logging import get_logger, get_correlation_id
-from app.core.exceptions import RAGException, rag_exception_to_http_exception
+from app.core.exceptions import RAGError
+from app.core.logging import get_correlation_id, get_logger
 
 logger = get_logger(__name__)
 
@@ -19,7 +19,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     Middleware to handle all exceptions and convert to HTTP responses.
 
     Catches:
-    - RAGException (custom exceptions)
+    - RAGError (custom exceptions)
     - HTTPException (FastAPI exceptions)
     - General exceptions (unexpected errors)
 
@@ -38,10 +38,9 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             Response or error response
         """
         try:
-            response = await call_next(request)
-            return response
+            return await call_next(request)
 
-        except RAGException as exc:
+        except RAGError as exc:
             # Handle custom RAG exceptions
             correlation_id = get_correlation_id()
 
@@ -50,7 +49,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 exception_type=type(exc).__name__,
                 message=exc.message,
                 status_code=exc.status_code,
-                details=exc.details
+                details=exc.details,
             )
 
             error_response = {
@@ -58,14 +57,11 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                     "type": type(exc).__name__,
                     "message": exc.message,
                     "details": exc.details,
-                    "correlation_id": correlation_id
+                    "correlation_id": correlation_id,
                 }
             }
 
-            return JSONResponse(
-                status_code=exc.status_code,
-                content=error_response
-            )
+            return JSONResponse(status_code=exc.status_code, content=error_response)
 
         except Exception as exc:
             # Handle unexpected exceptions
@@ -75,7 +71,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 "Unexpected exception occurred",
                 exception_type=type(exc).__name__,
                 path=request.url.path,
-                method=request.method
+                method=request.method,
             )
 
             # Don't expose internal error details in production
@@ -83,11 +79,10 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 "error": {
                     "type": "InternalServerError",
                     "message": "An unexpected error occurred. Please try again later.",
-                    "correlation_id": correlation_id
+                    "correlation_id": correlation_id,
                 }
             }
 
             return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content=error_response
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=error_response
             )

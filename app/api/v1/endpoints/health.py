@@ -4,13 +4,14 @@ Health check endpoints.
 Provides health status and readiness checks for the application.
 """
 
-from fastapi import APIRouter, Depends, status
-from typing import Dict, Any
+from typing import Any
 
+from fastapi import APIRouter, Depends, status
+
+from app.api.deps import get_rag_service
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.models.models import HealthResponse
-from app.api.deps import get_rag_service
 from app.services.rag_service import RAGService
 
 logger = get_logger(__name__)
@@ -23,11 +24,10 @@ router = APIRouter(tags=["Health"])
     response_model=HealthResponse,
     status_code=status.HTTP_200_OK,
     summary="Health check",
-    description="Check the health status of the application and its dependencies"
+    description="Check the health status of the application and its dependencies",
 )
 async def health_check(
-    settings: Settings = Depends(get_settings),
-    rag_service: RAGService = Depends(get_rag_service)
+    settings: Settings = Depends(get_settings), rag_service: RAGService = Depends(get_rag_service)
 ) -> HealthResponse:
     """
     Health check endpoint.
@@ -52,7 +52,7 @@ async def health_check(
         status="healthy" if is_healthy else "degraded",
         pinecone_connected=qdrant_connected,  # Note: Using qdrant but keeping model field name for compatibility
         openai_configured=bool(settings.llm.openai_api_key),
-        cohere_configured=bool(settings.llm.cohere_api_key)
+        cohere_configured=bool(settings.llm.cohere_api_key),
     )
 
 
@@ -60,11 +60,9 @@ async def health_check(
     "/ready",
     status_code=status.HTTP_200_OK,
     summary="Readiness check",
-    description="Check if the application is ready to serve requests"
+    description="Check if the application is ready to serve requests",
 )
-async def readiness_check(
-    rag_service: RAGService = Depends(get_rag_service)
-) -> Dict[str, Any]:
+async def readiness_check(rag_service: RAGService = Depends(get_rag_service)) -> dict[str, Any]:
     """
     Readiness check endpoint.
 
@@ -81,23 +79,20 @@ async def readiness_check(
 
         return {
             "ready": ready,
-            "message": "Application is ready" if ready else "Application is not ready"
+            "message": "Application is ready" if ready else "Application is not ready",
         }
     except Exception as e:
         logger.error("Readiness check failed", error=str(e))
-        return {
-            "ready": False,
-            "message": f"Readiness check failed: {str(e)}"
-        }
+        return {"ready": False, "message": f"Readiness check failed: {e!s}"}
 
 
 @router.get(
     "/live",
     status_code=status.HTTP_200_OK,
     summary="Liveness check",
-    description="Check if the application is alive"
+    description="Check if the application is alive",
 )
-async def liveness_check() -> Dict[str, str]:
+async def liveness_check() -> dict[str, str]:
     """
     Liveness check endpoint.
 

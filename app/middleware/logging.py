@@ -5,6 +5,7 @@ Logs all incoming requests and outgoing responses for audit and debugging.
 """
 
 import time
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -54,7 +55,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
             status_code=response.status_code,
             duration_ms=round(duration_ms, 2),
-            **context
+            **context,
         )
 
         return response

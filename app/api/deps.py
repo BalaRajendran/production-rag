@@ -8,14 +8,10 @@ Provides reusable dependencies for:
 - RAG service access
 """
 
-from typing import Generator
-from fastapi import Depends
-
 from app.core.config import Settings, get_settings
-from app.core.rate_limiter import RateLimiter, get_rate_limiter
 from app.core.observability import ObservabilityManager, get_observability_manager
+from app.core.rate_limiter import RateLimiter, get_rate_limiter
 from app.services.rag_service import RAGService
-
 
 # Singleton RAG service instance
 _rag_service: RAGService | None = None

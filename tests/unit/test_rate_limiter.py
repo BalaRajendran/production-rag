@@ -5,12 +5,13 @@ Tests Redis-backed rate limiting with sliding window algorithm
 and in-memory fallback.
 """
 
-import pytest
 import time
 from unittest.mock import Mock, patch
 
-from app.core.rate_limiter import RateLimiter, get_rate_limiter
+import pytest
+
 from app.core.exceptions import RateLimitError
+from app.core.rate_limiter import RateLimiter, get_rate_limiter
 
 
 class TestRateLimiter:
@@ -23,7 +24,7 @@ class TestRateLimiter:
         assert limiter._redis_client is None
         assert limiter._redis_available is False
 
-    @patch('app.core.rate_limiter.redis.Redis')
+    @patch("app.core.rate_limiter.redis.Redis")
     def test_initialization_with_redis_enabled(self, mock_redis_class, monkeypatch):
         """Test initialization when Redis is enabled."""
         monkeypatch.setenv("RATE_LIMIT_REDIS_ENABLED", "true")
@@ -37,7 +38,7 @@ class TestRateLimiter:
         limiter = RateLimiter()
         assert limiter._redis_available is True
 
-    @patch('app.core.rate_limiter.redis.Redis')
+    @patch("app.core.rate_limiter.redis.Redis")
     def test_redis_connection_failure(self, mock_redis_class, monkeypatch):
         """Test fallback to in-memory when Redis connection fails."""
         monkeypatch.setenv("RATE_LIMIT_REDIS_ENABLED", "true")
@@ -59,7 +60,7 @@ class TestRateLimiter:
         limiter = RateLimiter()
 
         # Make 5 requests (under limit of 10)
-        for i in range(5):
+        for _i in range(5):
             result = limiter.check_rate_limit("test-user", limit=10, window_seconds=60)
             assert result["allowed"] is True
             assert result["remaining"] >= 0
@@ -72,7 +73,7 @@ class TestRateLimiter:
 
         # Make requests up to limit
         limit = 5
-        for i in range(limit):
+        for _i in range(limit):
             limiter.check_rate_limit("test-user", limit=limit, window_seconds=60)
 
         # Next request should fail
@@ -90,7 +91,7 @@ class TestRateLimiter:
         limit = 5
 
         # User 1 makes requests
-        for i in range(limit):
+        for _i in range(limit):
             result = limiter.check_rate_limit("user-1", limit=limit, window_seconds=60)
             assert result["allowed"] is True
 
@@ -107,7 +108,7 @@ class TestRateLimiter:
         window = 1  # 1 second window
 
         # Make requests up to limit
-        for i in range(limit):
+        for _i in range(limit):
             limiter.check_rate_limit("test-user", limit=limit, window_seconds=window)
 
         # Should be at limit
@@ -128,7 +129,7 @@ class TestRateLimiter:
         limiter = RateLimiter()
 
         # Should always allow requests
-        for i in range(1000):
+        for _i in range(1000):
             result = limiter.check_rate_limit("test-user")
             assert result["allowed"] is True
             assert result["remaining"] == 999999
@@ -154,7 +155,7 @@ class TestRateLimiter:
         limit = 3
 
         # Exhaust limit
-        for i in range(limit):
+        for _i in range(limit):
             limiter.check_rate_limit("test-user", limit=limit, window_seconds=60)
 
         # Reset limit
@@ -172,7 +173,7 @@ class TestRateLimiter:
         limit = 10
 
         # Make some requests
-        for i in range(3):
+        for _i in range(3):
             limiter.check_rate_limit("test-user", limit=limit, window_seconds=60)
 
         # Get stats
@@ -202,18 +203,18 @@ class TestRateLimiter:
         window = 10
 
         # Exhaust limit
-        for i in range(limit):
+        for _i in range(limit):
             limiter.check_rate_limit("test-user", limit=limit, window_seconds=window)
 
         # Check retry_after
-        try:
+        with pytest.raises(RateLimitError) as exc_info:
             limiter.check_rate_limit("test-user", limit=limit, window_seconds=window)
-        except RateLimitError as e:
-            # retry_after should be <= window
-            assert e.retry_after <= window
-            assert e.retry_after > 0
 
-    @patch('app.core.rate_limiter.redis.Redis')
+        # retry_after should be <= window
+        assert exc_info.value.retry_after <= window
+        assert exc_info.value.retry_after > 0
+
+    @patch("app.core.rate_limiter.redis.Redis")
     def test_redis_pipeline_usage(self, mock_redis_class, monkeypatch):
         """Test that Redis pipeline is used for atomic operations."""
         monkeypatch.setenv("RATE_LIMIT_REDIS_ENABLED", "true")
@@ -251,13 +252,13 @@ class TestGetRateLimiter:
 
 
 @pytest.mark.parametrize(
-    "limit,requests,should_allow",
+    ("limit", "requests", "should_allow"),
     [
-        (10, 5, True),   # Under limit
+        (10, 5, True),  # Under limit
         (10, 10, False),  # At limit
         (10, 15, False),  # Over limit
         (100, 50, True),  # Large limit
-        (1, 1, False),    # Minimum limit
+        (1, 1, False),  # Minimum limit
     ],
 )
 def test_rate_limiting_scenarios(monkeypatch, limit, requests, should_allow):
@@ -267,7 +268,7 @@ def test_rate_limiting_scenarios(monkeypatch, limit, requests, should_allow):
     limiter = RateLimiter()
 
     # Make requests
-    for i in range(requests - 1):
+    for _i in range(requests - 1):
         limiter.check_rate_limit("test-user", limit=limit, window_seconds=60)
 
     # Check final request

@@ -8,9 +8,9 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.logging import get_logger, get_correlation_id
-from app.core.rate_limiter import get_rate_limiter
 from app.core.exceptions import RateLimitError
+from app.core.logging import get_correlation_id, get_logger
+from app.core.rate_limiter import get_rate_limiter
 
 logger = get_logger(__name__)
 
@@ -82,7 +82,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "Rate limit exceeded",
                 identifier=identifier,
                 path=request.url.path,
-                retry_after=exc.retry_after
+                retry_after=exc.retry_after,
             )
 
             error_response = {
@@ -90,7 +90,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "type": "RateLimitError",
                     "message": exc.message,
                     "retry_after": exc.retry_after,
-                    "correlation_id": correlation_id
+                    "correlation_id": correlation_id,
                 }
             }
 
@@ -102,8 +102,4 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if exc.retry_after:
                 headers["Retry-After"] = str(exc.retry_after)
 
-            return JSONResponse(
-                status_code=429,
-                content=error_response,
-                headers=headers
-            )
+            return JSONResponse(status_code=429, content=error_response, headers=headers)

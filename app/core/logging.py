@@ -95,13 +95,10 @@ def setup_logging() -> None:
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "simple": {
-                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            }
+            "simple": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
         },
         "handlers": {
-            name: {**handler, "formatter": "simple"}
-            for name, handler in handlers.items()
+            name: {**handler, "formatter": "simple"} for name, handler in handlers.items()
         },
         "loggers": {
             "": {
@@ -217,11 +214,7 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
 
 
 def log_api_request(
-    method: str,
-    path: str,
-    status_code: int,
-    duration_ms: float,
-    **kwargs: Any
+    method: str, path: str, status_code: int, duration_ms: float, **kwargs: Any
 ) -> None:
     """Log API request with timing and status.
 
@@ -242,7 +235,7 @@ def log_api_request(
             path=path,
             status_code=status_code,
             duration_ms=duration_ms,
-            **kwargs
+            **kwargs,
         )
     elif status_code >= 400:
         logger.warning(
@@ -251,7 +244,7 @@ def log_api_request(
             path=path,
             status_code=status_code,
             duration_ms=duration_ms,
-            **kwargs
+            **kwargs,
         )
     else:
         logger.info(
@@ -260,7 +253,7 @@ def log_api_request(
             path=path,
             status_code=status_code,
             duration_ms=duration_ms,
-            **kwargs
+            **kwargs,
         )
 
 

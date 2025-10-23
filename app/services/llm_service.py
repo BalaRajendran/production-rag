@@ -1,5 +1,5 @@
-from typing import List
 from openai import AsyncOpenAI
+
 from ..core.config import settings
 from ..models.models import Chunk, Message
 
@@ -14,10 +14,7 @@ class LLMService:
         self.model = settings.llm_model
 
     async def generate_answer(
-        self,
-        query: str,
-        chunks: List[Chunk],
-        conversation_history: List[Message] = None
+        self, query: str, chunks: list[Chunk], conversation_history: list[Message] | None = None
     ) -> str:
         """
         Generate answer using retrieved chunks and LLM.
@@ -38,24 +35,15 @@ class LLMService:
 
         try:
             response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1000
+                model=self.model, messages=messages, temperature=0.7, max_tokens=1000
             )
 
-            answer = response.choices[0].message.content
-            return answer
+            return response.choices[0].message.content
 
-        except Exception as e:
-            print(f"Error generating answer: {e}")
+        except Exception:
             return "I apologize, but I encountered an error generating an answer. Please try again."
 
-    async def generate_summarization(
-        self,
-        content: str,
-        instruction: str = None
-    ) -> str:
+    async def generate_summarization(self, content: str, instruction: str | None = None) -> str:
         """
         Generate summarization for content.
 
@@ -74,20 +62,15 @@ Summary:"""
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.5,
-                max_tokens=800
+                max_tokens=800,
             )
 
             return response.choices[0].message.content
 
-        except Exception as e:
-            print(f"Error generating summary: {e}")
+        except Exception:
             return "I apologize, but I encountered an error generating the summary."
 
-    async def answer_metadata_query(
-        self,
-        query: str,
-        chunks: List[Chunk]
-    ) -> str:
+    async def answer_metadata_query(self, query: str, chunks: list[Chunk]) -> str:
         """
         Answer query about metadata (author, date, etc.).
 
@@ -111,16 +94,15 @@ Answer:"""
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=500
+                max_tokens=500,
             )
 
             return response.choices[0].message.content
 
-        except Exception as e:
-            print(f"Error answering metadata query: {e}")
+        except Exception:
             return "I apologize, but I encountered an error answering your question."
 
-    def _build_context(self, chunks: List[Chunk]) -> str:
+    def _build_context(self, chunks: list[Chunk]) -> str:
         """
         Build context string from chunks.
 
@@ -144,18 +126,13 @@ Answer:"""
                 if metadata_parts:
                     metadata_str = " | ".join(metadata_parts) + "\n"
 
-            context_parts.append(
-                f"[Context {i}]\n{metadata_str}{chunk.text}\n"
-            )
+            context_parts.append(f"[Context {i}]\n{metadata_str}{chunk.text}\n")
 
         return "\n".join(context_parts)
 
     def _build_messages(
-        self,
-        query: str,
-        context: str,
-        conversation_history: List[Message] = None
-    ) -> List[dict]:
+        self, query: str, context: str, conversation_history: list[Message] | None = None
+    ) -> list[dict]:
         """Build message list for LLM."""
         system_message = """You are a helpful AI assistant that answers questions based on the provided context.
 
@@ -172,10 +149,7 @@ Instructions:
         # Add conversation history if provided
         if conversation_history:
             for msg in conversation_history[-5:]:  # Last 5 messages
-                messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
+                messages.append({"role": msg.role, "content": msg.content})
 
         # Add current query with context
         user_message = f"""Context:
@@ -189,7 +163,7 @@ Answer:"""
 
         return messages
 
-    def _format_metadata_list(self, metadata_list: List[dict]) -> str:
+    def _format_metadata_list(self, metadata_list: list[dict]) -> str:
         """Format metadata list for metadata queries."""
         formatted = []
 

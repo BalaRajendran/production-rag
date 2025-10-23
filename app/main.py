@@ -11,24 +11,23 @@ FastAPI application with production-grade architecture including:
 """
 
 from contextlib import asynccontextmanager
-import uvicorn
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.deps import get_rag_service
+from app.api.v1 import api_router
 from app.core.config import get_settings
-from app.core.logging import setup_logging, get_logger
+from app.core.logging import get_logger, setup_logging
 from app.core.observability import get_observability_manager
 from app.middleware import (
-    TimingMiddleware,
     CorrelationIDMiddleware,
-    LoggingMiddleware,
     ErrorHandlerMiddleware,
+    LoggingMiddleware,
     RateLimitMiddleware,
+    TimingMiddleware,
 )
-from app.api.v1 import api_router
-from app.api.deps import get_rag_service
-
 
 # Initialize settings and logging
 settings = get_settings()
@@ -37,7 +36,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """
     Application lifespan manager.
 
@@ -50,7 +49,7 @@ async def lifespan(app: FastAPI):
         "Starting Production RAG Framework",
         environment=settings.app.environment,
         version=settings.app.app_version,
-        debug=settings.app.debug
+        debug=settings.app.debug,
     )
 
     # Initialize RAG service
@@ -63,7 +62,7 @@ async def lifespan(app: FastAPI):
         "Feature flags",
         rate_limiting=settings.rate_limit.rate_limit_enabled,
         langfuse=settings.observability.langfuse_enabled,
-        metrics=settings.observability.enable_metrics
+        metrics=settings.observability.enable_metrics,
     )
 
     yield
@@ -120,10 +119,7 @@ app.add_middleware(TimingMiddleware)
 
 
 # Include API v1 router
-app.include_router(
-    api_router,
-    prefix=f"{settings.app.api_prefix}/v1"
-)
+app.include_router(api_router, prefix=f"{settings.app.api_prefix}/v1")
 
 
 # Root endpoint (outside versioning)
@@ -141,7 +137,7 @@ async def root():
         "environment": settings.app.environment,
         "docs": "/docs",
         "health": f"{settings.app.api_prefix}/v1/health",
-        "api_v1": f"{settings.app.api_prefix}/v1"
+        "api_v1": f"{settings.app.api_prefix}/v1",
     }
 
 
@@ -152,5 +148,5 @@ if __name__ == "__main__":
         host=settings.app.api_host,
         port=settings.app.api_port,
         reload=settings.app.debug,
-        log_level=settings.observability.log_level.lower()
+        log_level=settings.observability.log_level.lower(),
     )

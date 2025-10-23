@@ -8,46 +8,46 @@ import pytest
 from fastapi import HTTPException, status
 
 from app.core.exceptions import (
-    RAGException,
-    ConfigurationError,
-    VectorStoreError,
-    EmbeddingError,
-    LLMError,
-    RerankError,
-    DocumentProcessingError,
-    DocumentNotFoundError,
-    RateLimitError,
-    ValidationError,
     AuthenticationError,
     AuthorizationError,
+    ConfigurationError,
+    DocumentNotFoundError,
+    DocumentProcessingError,
+    EmbeddingError,
+    LLMError,
+    RAGError,
+    RateLimitError,
+    RerankError,
+    ValidationError,
+    VectorStoreError,
     rag_exception_to_http_exception,
 )
 
 
-class TestRAGException:
-    """Tests for base RAGException class."""
+class TestRAGError:
+    """Tests for base RAGError class."""
 
     def test_default_initialization(self):
         """Test default exception initialization."""
-        exc = RAGException("Test error")
+        exc = RAGError("Test error")
         assert exc.message == "Test error"
         assert exc.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert exc.details == {}
 
     def test_with_status_code(self):
         """Test exception with custom status code."""
-        exc = RAGException("Test error", status_code=status.HTTP_400_BAD_REQUEST)
+        exc = RAGError("Test error", status_code=status.HTTP_400_BAD_REQUEST)
         assert exc.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_with_details(self):
         """Test exception with details."""
         details = {"field": "value", "count": 42}
-        exc = RAGException("Test error", details=details)
+        exc = RAGError("Test error", details=details)
         assert exc.details == details
 
     def test_string_representation(self):
         """Test string representation of exception."""
-        exc = RAGException("Test error")
+        exc = RAGError("Test error")
         assert str(exc) == "Test error"
 
 
@@ -99,11 +99,7 @@ class TestLLMError:
 
     def test_with_api_details(self):
         """Test LLM error with API response details."""
-        details = {
-            "api": "openai",
-            "error_code": "rate_limit_exceeded",
-            "retry_after": 60
-        }
+        details = {"api": "openai", "error_code": "rate_limit_exceeded", "retry_after": 60}
         exc = LLMError("OpenAI rate limit", details=details)
         assert exc.details["api"] == "openai"
         assert exc.details["retry_after"] == 60
@@ -187,11 +183,7 @@ class TestValidationError:
 
     def test_with_field_details(self):
         """Test validation error with field details."""
-        details = {
-            "field": "email",
-            "expected": "valid email format",
-            "received": "invalid-email"
-        }
+        details = {"field": "email", "expected": "valid email format", "received": "invalid-email"}
         exc = ValidationError("Email validation failed", details=details)
         assert exc.details["field"] == "email"
 
@@ -239,7 +231,7 @@ class TestRagExceptionToHttpException:
 
     def test_basic_conversion(self):
         """Test basic exception conversion."""
-        rag_exc = RAGException("Test error")
+        rag_exc = RAGError("Test error")
         http_exc = rag_exception_to_http_exception(rag_exc)
 
         assert isinstance(http_exc, HTTPException)
@@ -250,7 +242,7 @@ class TestRagExceptionToHttpException:
     def test_conversion_with_details(self):
         """Test conversion with exception details."""
         details = {"field": "value", "count": 42}
-        rag_exc = RAGException("Test error", details=details)
+        rag_exc = RAGError("Test error", details=details)
         http_exc = rag_exception_to_http_exception(rag_exc)
 
         assert http_exc.detail["field"] == "value"
@@ -276,7 +268,7 @@ class TestRagExceptionToHttpException:
 
 
 @pytest.mark.parametrize(
-    "exception_class,expected_status",
+    ("exception_class", "expected_status"),
     [
         (ConfigurationError, status.HTTP_500_INTERNAL_SERVER_ERROR),
         (VectorStoreError, status.HTTP_503_SERVICE_UNAVAILABLE),

@@ -5,8 +5,9 @@ This file contains shared fixtures and configuration for all tests.
 """
 
 import os
+from collections.abc import AsyncGenerator, Generator
+
 import pytest
-from typing import Generator, AsyncGenerator
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
@@ -21,13 +22,13 @@ os.environ["RATE_LIMIT_RATE_LIMIT_ENABLED"] = "false"  # Disable rate limiting i
 os.environ["RATE_LIMIT_REDIS_ENABLED"] = "false"  # Use in-memory rate limiting
 os.environ["OBS_LANGFUSE_ENABLED"] = "false"  # Disable Langfuse in tests
 
-from app.main import app
-from app.core.config import get_settings, Settings
-
+from app.core.config import Settings, get_settings  # noqa: E402
+from app.main import app  # noqa: E402
 
 # ==============================================================================
 # Session Fixtures
 # ==============================================================================
+
 
 @pytest.fixture(scope="session")
 def test_settings() -> Settings:
@@ -39,7 +40,8 @@ def test_settings() -> Settings:
 # Test Client Fixtures
 # ==============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def client() -> Generator[TestClient, None, None]:
     """
     Synchronous test client for FastAPI application.
@@ -53,7 +55,7 @@ def client() -> Generator[TestClient, None, None]:
         yield test_client
 
 
-@pytest.fixture
+@pytest.fixture()
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """
     Asynchronous test client for FastAPI application.
@@ -71,7 +73,8 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 # Mock Fixtures
 # ==============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def mock_redis(mocker):
     """Mock Redis client for rate limiting tests."""
     mock_client = mocker.Mock()
@@ -85,7 +88,7 @@ def mock_redis(mocker):
     return mock_client
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_qdrant(mocker):
     """Mock Qdrant client for vector store tests."""
     mock_client = mocker.Mock()
@@ -97,7 +100,7 @@ def mock_qdrant(mocker):
     return mock_client
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_openai(mocker):
     """Mock OpenAI client for LLM tests."""
     mock_client = mocker.Mock()
@@ -114,16 +117,14 @@ def mock_openai(mocker):
     mock_choice.message.content = "Test response"
     mock_completion_response.choices = [mock_choice]
     mock_completion_response.usage = mocker.Mock(
-        prompt_tokens=50,
-        completion_tokens=20,
-        total_tokens=70
+        prompt_tokens=50, completion_tokens=20, total_tokens=70
     )
     mock_client.chat.completions.create.return_value = mock_completion_response
 
     return mock_client
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_cohere(mocker):
     """Mock Cohere client for reranking tests."""
     mock_client = mocker.Mock()
@@ -145,70 +146,73 @@ def mock_cohere(mocker):
 # Data Fixtures
 # ==============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def sample_document():
     """Sample document for testing."""
     return {
         "id": "test-doc-1",
         "content": "This is a test document about Python programming. "
-                   "Python is a high-level programming language known for its simplicity.",
+        "Python is a high-level programming language known for its simplicity.",
         "metadata": {
             "title": "Python Programming Guide",
             "author": "Test Author",
             "source": "test.com",
-            "category": "programming"
-        }
+            "category": "programming",
+        },
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_documents():
     """Multiple sample documents for testing."""
     return [
         {
             "id": "doc-1",
             "content": "FastAPI is a modern web framework for building APIs with Python.",
-            "metadata": {"title": "FastAPI Guide", "category": "web"}
+            "metadata": {"title": "FastAPI Guide", "category": "web"},
         },
         {
             "id": "doc-2",
             "content": "Redis is an in-memory data structure store used as a database and cache.",
-            "metadata": {"title": "Redis Overview", "category": "database"}
+            "metadata": {"title": "Redis Overview", "category": "database"},
         },
         {
             "id": "doc-3",
             "content": "Qdrant is a vector similarity search engine for machine learning.",
-            "metadata": {"title": "Qdrant Introduction", "category": "ml"}
-        }
+            "metadata": {"title": "Qdrant Introduction", "category": "ml"},
+        },
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_query_request():
     """Sample query request for testing."""
     return {
         "query": "What is Python programming?",
         "conversation_history": [
             {"role": "user", "content": "Tell me about programming languages"},
-            {"role": "assistant", "content": "There are many programming languages like Python, Java, etc."}
-        ]
+            {
+                "role": "assistant",
+                "content": "There are many programming languages like Python, Java, etc.",
+            },
+        ],
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_index_request(sample_documents):
     """Sample index request for testing."""
-    return {
-        "documents": sample_documents
-    }
+    return {"documents": sample_documents}
 
 
 # ==============================================================================
 # Environment Fixtures
 # ==============================================================================
 
-@pytest.fixture
-def clean_environment(monkeypatch):
+
+@pytest.fixture()
+def _clean_environment(monkeypatch):
     """Clean environment for testing configuration."""
     # Remove all environment variables with our prefixes
     for key in list(os.environ.keys()):
@@ -216,8 +220,8 @@ def clean_environment(monkeypatch):
             monkeypatch.delenv(key, raising=False)
 
 
-@pytest.fixture
-def test_env_vars(monkeypatch):
+@pytest.fixture()
+def _test_env_vars(monkeypatch):
     """Set test environment variables."""
     test_vars = {
         "APP_ENVIRONMENT": "development",
@@ -226,7 +230,7 @@ def test_env_vars(monkeypatch):
         "LLM_COHERE_API_KEY": "test-key",
         "VECTOR_QDRANT_HOST": "localhost",
         "RATE_LIMIT_RATE_LIMIT_ENABLED": "false",
-        "OBS_LANGFUSE_ENABLED": "false"
+        "OBS_LANGFUSE_ENABLED": "false",
     }
     for key, value in test_vars.items():
         monkeypatch.setenv(key, value)
@@ -236,13 +240,14 @@ def test_env_vars(monkeypatch):
 # Utility Fixtures
 # ==============================================================================
 
-@pytest.fixture
+
+@pytest.fixture()
 def correlation_id():
     """Generate a test correlation ID."""
     return "test-correlation-id-12345"
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_logger(mocker):
     """Mock logger for testing logging functionality."""
     return mocker.Mock()
@@ -252,17 +257,12 @@ def mock_logger(mocker):
 # Pytest Configuration Hooks
 # ==============================================================================
 
+
 def pytest_configure(config):
     """Configure pytest with custom settings."""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "e2e: mark test as an end-to-end test"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "e2e: mark test as an end-to-end test")
 
 
 def pytest_collection_modifyitems(config, items):

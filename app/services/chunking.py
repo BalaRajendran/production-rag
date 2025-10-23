@@ -1,5 +1,7 @@
-from typing import List, Dict, Any
+from typing import Any
+
 import tiktoken
+
 from ..core.config import settings
 
 
@@ -13,16 +15,12 @@ class ChunkingService:
     - Captures information standalone
     """
 
-    def __init__(self, chunk_size: int = None, chunk_overlap: int = None):
+    def __init__(self, chunk_size: int | None = None, chunk_overlap: int | None = None):
         self.chunk_size = chunk_size or settings.chunk_size
         self.chunk_overlap = chunk_overlap or settings.chunk_overlap
         self.encoding = tiktoken.get_encoding("cl100k_base")
 
-    def chunk_text(
-        self,
-        text: str,
-        metadata: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+    def chunk_text(self, text: str, metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """
         Chunk text into smaller pieces with overlap.
 
@@ -62,14 +60,9 @@ class ChunkingService:
                 chunks.append(self._create_chunk(current_chunk, metadata))
 
                 # Keep last few sentences for overlap
-                overlap_sentences = self._get_overlap_sentences(
-                    current_chunk,
-                    self.chunk_overlap
-                )
+                overlap_sentences = self._get_overlap_sentences(current_chunk, self.chunk_overlap)
                 current_chunk = overlap_sentences
-                current_tokens = sum(
-                    len(self.encoding.encode(s)) for s in current_chunk
-                )
+                current_tokens = sum(len(self.encoding.encode(s)) for s in current_chunk)
 
             current_chunk.append(sentence)
             current_tokens += sentence_tokens
@@ -80,44 +73,38 @@ class ChunkingService:
 
         return chunks
 
-    def _split_into_sentences(self, text: str) -> List[str]:
+    def _split_into_sentences(self, text: str) -> list[str]:
         """Split text into sentences, handling common abbreviations."""
         # Simple sentence splitting (can be enhanced with spaCy/NLTK)
         import re
 
         # Add space after sentence endings if not present
-        text = re.sub(r'([.!?])([A-Z])', r'\1 \2', text)
+        text = re.sub(r"([.!?])([A-Z])", r"\1 \2", text)
 
         # Split on sentence endings
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = re.split(r"(?<=[.!?])\s+", text)
 
         return [s.strip() for s in sentences if s.strip()]
 
-    def _split_long_sentence(
-        self,
-        sentence: str,
-        metadata: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def _split_long_sentence(self, sentence: str, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         """Split a sentence that exceeds chunk size."""
         tokens = self.encoding.encode(sentence)
         chunks = []
 
         for i in range(0, len(tokens), self.chunk_size - self.chunk_overlap):
-            chunk_tokens = tokens[i:i + self.chunk_size]
+            chunk_tokens = tokens[i : i + self.chunk_size]
             chunk_text = self.encoding.decode(chunk_tokens)
-            chunks.append({
-                "text": chunk_text.strip(),
-                "metadata": metadata or {},
-                "token_count": len(chunk_tokens)
-            })
+            chunks.append(
+                {
+                    "text": chunk_text.strip(),
+                    "metadata": metadata or {},
+                    "token_count": len(chunk_tokens),
+                }
+            )
 
         return chunks
 
-    def _get_overlap_sentences(
-        self,
-        sentences: List[str],
-        max_overlap_tokens: int
-    ) -> List[str]:
+    def _get_overlap_sentences(self, sentences: list[str], max_overlap_tokens: int) -> list[str]:
         """Get sentences for overlap from the end of current chunk."""
         overlap = []
         overlap_tokens = 0
@@ -132,24 +119,18 @@ class ChunkingService:
 
         return overlap
 
-    def _create_chunk(
-        self,
-        sentences: List[str],
-        metadata: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _create_chunk(self, sentences: list[str], metadata: dict[str, Any]) -> dict[str, Any]:
         """Create a chunk from sentences with metadata."""
         text = " ".join(sentences)
         return {
             "text": text.strip(),
             "metadata": metadata or {},
-            "token_count": len(self.encoding.encode(text))
+            "token_count": len(self.encoding.encode(text)),
         }
 
     def chunk_with_metadata_injection(
-        self,
-        text: str,
-        metadata: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+        self, text: str, metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Chunk text and inject relevant metadata into each chunk.
 
@@ -169,7 +150,7 @@ class ChunkingService:
 
         return chunks
 
-    def _format_metadata(self, metadata: Dict[str, Any]) -> str:
+    def _format_metadata(self, metadata: dict[str, Any]) -> str:
         """Format metadata for injection into chunk text."""
         if not metadata:
             return ""

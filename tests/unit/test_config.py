@@ -11,12 +11,12 @@ from pydantic import ValidationError
 from app.core.config import (
     AppSettings,
     LLMSettings,
-    VectorDBSettings,
+    ObservabilitySettings,
     RAGSettings,
     RateLimitSettings,
-    ObservabilitySettings,
     SecuritySettings,
     Settings,
+    VectorDBSettings,
     get_settings,
 )
 
@@ -127,13 +127,13 @@ class TestRAGSettings:
 
     def test_chunk_overlap_validation(self, monkeypatch):
         """Test chunk overlap validation."""
-        # Valid: overlap < chunk_size
+        # Valid: overlap < chunk_size  # noqa: ERA001
         monkeypatch.setenv("RAG_CHUNK_SIZE", "512")
         monkeypatch.setenv("RAG_CHUNK_OVERLAP", "50")
         settings = RAGSettings()
         assert settings.chunk_overlap == 50
 
-        # Invalid: overlap >= chunk_size
+        # Invalid: overlap >= chunk_size  # noqa: ERA001
         monkeypatch.setenv("RAG_CHUNK_SIZE", "512")
         monkeypatch.setenv("RAG_CHUNK_OVERLAP", "512")
         with pytest.raises(ValidationError):
@@ -291,7 +291,7 @@ class TestHierarchicalSettings:
 
 
 @pytest.mark.parametrize(
-    "env_var,expected_value",
+    ("env_var", "expected_value"),
     [
         ("development", "development"),
         ("staging", "staging"),

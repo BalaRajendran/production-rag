@@ -5,11 +5,12 @@ Extracts or generates correlation IDs for request tracking across services.
 """
 
 import uuid
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.logging import set_correlation_id, get_logger
+from app.core.logging import get_logger, set_correlation_id
 
 logger = get_logger(__name__)
 

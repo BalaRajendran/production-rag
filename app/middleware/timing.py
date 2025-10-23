@@ -5,6 +5,7 @@ Measures request processing time and adds timing headers to responses.
 """
 
 import time
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -49,7 +50,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
                 "Slow request detected",
                 path=request.url.path,
                 method=request.method,
-                duration_seconds=process_time
+                duration_seconds=process_time,
             )
 
         return response

@@ -9,11 +9,11 @@ Provides request/response processing middleware including:
 - Rate limiting
 """
 
-from .timing import TimingMiddleware
 from .correlation import CorrelationIDMiddleware
-from .logging import LoggingMiddleware
 from .error_handler import ErrorHandlerMiddleware
+from .logging import LoggingMiddleware
 from .rate_limit import RateLimitMiddleware
+from .timing import TimingMiddleware
 
 __all__ = [
     "TimingMiddleware",

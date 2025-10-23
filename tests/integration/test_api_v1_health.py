@@ -15,10 +15,7 @@ class TestHealthEndpoint:
         """Test successful health check."""
         # Mock RAG service stats
         mock_stats = {"vectors": 1000, "dimensions": 3072}
-        mocker.patch(
-            "app.api.v1.endpoints.health.RAGService.get_stats",
-            return_value=mock_stats
-        )
+        mocker.patch("app.api.v1.endpoints.health.RAGService.get_stats", return_value=mock_stats)
 
         response = client.get("/api/v1/health")
 
@@ -35,7 +32,7 @@ class TestHealthEndpoint:
         # Mock failed stats retrieval
         mocker.patch(
             "app.api.v1.endpoints.health.RAGService.get_stats",
-            side_effect=Exception("Connection failed")
+            side_effect=Exception("Connection failed"),
         )
 
         response = client.get("/api/v1/health")
@@ -76,10 +73,7 @@ class TestReadinessEndpoint:
         """Test readiness check when application is ready."""
         # Mock successful stats retrieval
         mock_stats = {"vectors": 1000}
-        mocker.patch(
-            "app.api.v1.endpoints.health.RAGService.get_stats",
-            return_value=mock_stats
-        )
+        mocker.patch("app.api.v1.endpoints.health.RAGService.get_stats", return_value=mock_stats)
 
         response = client.get("/api/v1/ready")
 
@@ -93,10 +87,7 @@ class TestReadinessEndpoint:
     def test_readiness_check_when_not_ready(self, client, mocker):
         """Test readiness check when application is not ready."""
         # Mock failed stats retrieval
-        mocker.patch(
-            "app.api.v1.endpoints.health.RAGService.get_stats",
-            return_value=None
-        )
+        mocker.patch("app.api.v1.endpoints.health.RAGService.get_stats", return_value=None)
 
         response = client.get("/api/v1/ready")
 
@@ -111,7 +102,7 @@ class TestReadinessEndpoint:
         # Mock exception
         mocker.patch(
             "app.api.v1.endpoints.health.RAGService.get_stats",
-            side_effect=Exception("Database error")
+            side_effect=Exception("Database error"),
         )
 
         response = client.get("/api/v1/ready")
@@ -149,11 +140,7 @@ class TestHealthEndpointsIntegration:
 
     def test_all_health_endpoints_accessible(self, client):
         """Test that all health endpoints are accessible."""
-        endpoints = [
-            "/api/v1/health",
-            "/api/v1/ready",
-            "/api/v1/live"
-        ]
+        endpoints = ["/api/v1/health", "/api/v1/ready", "/api/v1/live"]
 
         for endpoint in endpoints:
             response = client.get(endpoint)
@@ -180,15 +167,12 @@ class TestHealthEndpointsIntegration:
     def test_health_check_with_custom_correlation_id(self, client):
         """Test health check with custom correlation ID."""
         custom_id = "test-correlation-123"
-        response = client.get(
-            "/api/v1/health",
-            headers={"X-Correlation-ID": custom_id}
-        )
+        response = client.get("/api/v1/health", headers={"X-Correlation-ID": custom_id})
 
         assert response.status_code == status.HTTP_200_OK
         assert response.headers["X-Correlation-ID"] == custom_id
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_health_check_performance(self, client):
         """Test that health check responds quickly."""
         import time
@@ -214,19 +198,16 @@ class TestHealthEndpointsCORS:
 
     def test_cors_allows_credentials(self, client):
         """Test that CORS allows credentials."""
-        response = client.get(
-            "/api/v1/health",
-            headers={"Origin": "http://localhost:3000"}
-        )
+        response = client.get("/api/v1/health", headers={"Origin": "http://localhost:3000"})
 
         assert response.status_code == status.HTTP_200_OK
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestHealthEndpointsWithRealServices:
     """Tests with real service dependencies (requires Docker)."""
 
-    @pytest.mark.qdrant
+    @pytest.mark.qdrant()
     def test_health_check_with_real_qdrant(self, client):
         """Test health check with real Qdrant connection."""
         # This test requires Qdrant to be running

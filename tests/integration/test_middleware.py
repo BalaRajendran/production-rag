@@ -4,8 +4,9 @@ Integration tests for middleware stack.
 Tests timing, correlation ID, logging, error handling, and rate limiting middleware.
 """
 
-import pytest
 import time
+
+import pytest
 from fastapi import status
 
 
@@ -52,10 +53,7 @@ class TestCorrelationIDMiddleware:
     def test_uses_provided_correlation_id(self, client):
         """Test that provided correlation ID is used."""
         custom_id = "test-correlation-12345"
-        response = client.get(
-            "/api/v1/health",
-            headers={"X-Correlation-ID": custom_id}
-        )
+        response = client.get("/api/v1/health", headers={"X-Correlation-ID": custom_id})
 
         assert response.headers["X-Correlation-ID"] == custom_id
 
@@ -71,10 +69,7 @@ class TestCorrelationIDMiddleware:
     def test_correlation_id_persists_through_request(self, client):
         """Test that correlation ID is same throughout request lifecycle."""
         custom_id = "persistent-id-test"
-        response = client.get(
-            "/api/v1/health",
-            headers={"X-Correlation-ID": custom_id}
-        )
+        response = client.get("/api/v1/health", headers={"X-Correlation-ID": custom_id})
 
         assert response.headers["X-Correlation-ID"] == custom_id
 
@@ -122,10 +117,7 @@ class TestErrorHandlerMiddleware:
     def test_error_response_includes_correlation_id(self, client):
         """Test that error responses include correlation ID."""
         custom_id = "error-test-id"
-        response = client.get(
-            "/api/v1/nonexistent",
-            headers={"X-Correlation-ID": custom_id}
-        )
+        response = client.get("/api/v1/nonexistent", headers={"X-Correlation-ID": custom_id})
 
         assert response.headers["X-Correlation-ID"] == custom_id
 
@@ -133,8 +125,7 @@ class TestErrorHandlerMiddleware:
         """Test that errors are formatted consistently."""
         # Mock an endpoint that raises an exception
         mocker.patch(
-            "app.api.v1.endpoints.health.health_check",
-            side_effect=Exception("Test error")
+            "app.api.v1.endpoints.health.health_check", side_effect=Exception("Test error")
         )
 
         response = client.get("/api/v1/health")
@@ -179,7 +170,7 @@ class TestRateLimitMiddleware:
         assert limit > 0
         assert remaining >= 0
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_blocks_requests_over_limit(self, client, monkeypatch):
         """Test that requests over limit are blocked."""
         # Enable rate limiting with low limit
@@ -232,10 +223,7 @@ class TestMiddlewareStack:
 
     def test_cors_middleware_integration(self, client):
         """Test that CORS middleware is properly integrated."""
-        response = client.get(
-            "/api/v1/health",
-            headers={"Origin": "http://localhost:3000"}
-        )
+        response = client.get("/api/v1/health", headers={"Origin": "http://localhost:3000"})
 
         assert response.status_code == status.HTTP_200_OK
         # CORS headers should be present (added by CORS middleware)
@@ -244,7 +232,7 @@ class TestMiddlewareStack:
 class TestMiddlewarePerformance:
     """Performance tests for middleware stack."""
 
-    @pytest.mark.slow
+    @pytest.mark.slow()
     def test_middleware_overhead_is_minimal(self, client):
         """Test that middleware adds minimal overhead."""
         # Make request and check timing
@@ -274,7 +262,7 @@ class TestMiddlewarePerformance:
         assert len(set(correlation_ids)) == len(correlation_ids)
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestMiddlewareIntegrationScenarios:
     """Integration scenarios testing middleware combinations."""
 
@@ -288,10 +276,9 @@ class TestMiddlewareIntegrationScenarios:
 
     def test_slow_request_logging(self, client, mocker):
         """Test that slow requests are logged."""
-        mock_logger = mocker.patch("app.middleware.timing.logger")
+        mocker.patch("app.middleware.timing.logger")
 
         # Mock a slow endpoint
-        original_health = client.app.routes
         # (In real test, we'd mock the endpoint to be slow)
 
         response = client.get("/api/v1/health")
@@ -302,10 +289,7 @@ class TestMiddlewareIntegrationScenarios:
         mock_logger = mocker.patch("app.middleware.logging.logger")
 
         custom_id = "test-log-correlation"
-        client.get(
-            "/api/v1/health",
-            headers={"X-Correlation-ID": custom_id}
-        )
+        client.get("/api/v1/health", headers={"X-Correlation-ID": custom_id})
 
         # Logger should have been called (correlation ID would be in context)
         assert mock_logger.info.called

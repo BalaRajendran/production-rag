@@ -19,8 +19,8 @@ SAMPLE_DOCUMENTS = [
             "author": "Tech Writer",
             "category": "programming",
             "language": "python",
-            "difficulty": "beginner"
-        }
+            "difficulty": "beginner",
+        },
     },
     {
         "id": "doc-fastapi-1",
@@ -35,8 +35,8 @@ SAMPLE_DOCUMENTS = [
             "author": "API Expert",
             "category": "web-development",
             "framework": "fastapi",
-            "difficulty": "intermediate"
-        }
+            "difficulty": "intermediate",
+        },
     },
     {
         "id": "doc-redis-1",
@@ -51,8 +51,8 @@ SAMPLE_DOCUMENTS = [
             "author": "Database Admin",
             "category": "database",
             "type": "nosql",
-            "difficulty": "intermediate"
-        }
+            "difficulty": "intermediate",
+        },
     },
     {
         "id": "doc-rag-1",
@@ -68,8 +68,8 @@ SAMPLE_DOCUMENTS = [
             "author": "AI Researcher",
             "category": "artificial-intelligence",
             "topic": "rag",
-            "difficulty": "advanced"
-        }
+            "difficulty": "advanced",
+        },
     },
     {
         "id": "doc-vector-db-1",
@@ -85,40 +85,37 @@ SAMPLE_DOCUMENTS = [
             "author": "Data Engineer",
             "category": "database",
             "type": "vector-db",
-            "difficulty": "advanced"
-        }
-    }
+            "difficulty": "advanced",
+        },
+    },
 ]
 
 # Minimal document for basic tests
 MINIMAL_DOCUMENT = {
     "id": "minimal-1",
     "content": "This is a minimal test document.",
-    "metadata": {"title": "Minimal Test"}
+    "metadata": {"title": "Minimal Test"},
 }
 
 # Document with long content
 LONG_DOCUMENT = {
     "id": "long-doc-1",
-    "content": " ".join(["This is sentence number {}.".format(i) for i in range(1, 501)]),
-    "metadata": {
-        "title": "Long Document",
-        "length": "500_sentences"
-    }
+    "content": " ".join([f"This is sentence number {i}." for i in range(1, 501)]),
+    "metadata": {"title": "Long Document", "length": "500_sentences"},
 }
 
 # Document with special characters
 SPECIAL_CHARS_DOCUMENT = {
     "id": "special-1",
-    "content": "Document with special chars: @#$%^&*()_+-={}[]|\\:\";<>?,./`~",
-    "metadata": {"title": "Special Characters Test"}
+    "content": 'Document with special chars: @#$%^&*()_+-={}[]|\\:";<>?,./`~',
+    "metadata": {"title": "Special Characters Test"},
 }
 
 # Document with multilingual content
 MULTILINGUAL_DOCUMENT = {
     "id": "multilingual-1",
     "content": "Hello! Bonjour! Hola! Привет! 你好! こんにちは! مرحبا! नमस्ते!",
-    "metadata": {"title": "Multilingual Greetings", "languages": "multiple"}
+    "metadata": {"title": "Multilingual Greetings", "languages": "multiple"},
 }
 
 # Sample queries for testing
@@ -133,8 +130,11 @@ SAMPLE_QUERIES = [
 # Sample conversation history
 SAMPLE_CONVERSATION = [
     {"role": "user", "content": "What programming languages should I learn?"},
-    {"role": "assistant", "content": "Python is a great language to start with due to its simplicity."},
-    {"role": "user", "content": "Tell me more about Python"}
+    {
+        "role": "assistant",
+        "content": "Python is a great language to start with due to its simplicity.",
+    },
+    {"role": "user", "content": "Tell me more about Python"},
 ]
 
 # Expected chunks (for chunking tests)
@@ -154,16 +154,8 @@ INVALID_DOCUMENTS = [
 
 # Mock API responses
 MOCK_OPENAI_EMBEDDING = {
-    "data": [
-        {
-            "embedding": [0.1] * 3072,  # 3072-dimensional vector
-            "index": 0
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 10,
-        "total_tokens": 10
-    }
+    "data": [{"embedding": [0.1] * 3072, "index": 0}],  # 3072-dimensional vector
+    "usage": {"prompt_tokens": 10, "total_tokens": 10},
 }
 
 MOCK_OPENAI_COMPLETION = {
@@ -171,17 +163,13 @@ MOCK_OPENAI_COMPLETION = {
         {
             "message": {
                 "content": "This is a test response from the language model.",
-                "role": "assistant"
+                "role": "assistant",
             },
             "finish_reason": "stop",
-            "index": 0
+            "index": 0,
         }
     ],
-    "usage": {
-        "prompt_tokens": 50,
-        "completion_tokens": 20,
-        "total_tokens": 70
-    }
+    "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70},
 }
 
 MOCK_COHERE_RERANK = {
@@ -200,8 +188,8 @@ MOCK_QDRANT_SEARCH_RESULTS = [
         "payload": {
             "text": "Python is a high-level programming language.",
             "document_id": "doc-python-1",
-            "metadata": {"title": "Introduction to Python"}
-        }
+            "metadata": {"title": "Introduction to Python"},
+        },
     },
     {
         "id": "chunk-2",
@@ -209,9 +197,9 @@ MOCK_QDRANT_SEARCH_RESULTS = [
         "payload": {
             "text": "FastAPI is a modern web framework.",
             "document_id": "doc-fastapi-1",
-            "metadata": {"title": "FastAPI Framework"}
-        }
-    }
+            "metadata": {"title": "FastAPI Framework"},
+        },
+    },
 ]
 
 # Expected API responses
@@ -223,22 +211,22 @@ EXPECTED_QUERY_RESPONSE = {
             "chunk_id": "chunk-1",
             "text": "Python is a high-level programming language.",
             "score": 0.95,
-            "metadata": {"title": "Introduction to Python"}
+            "metadata": {"title": "Introduction to Python"},
         }
     ],
     "metadata": {
         "num_sources": 1,
         "retrieval_time": 0.05,
         "generation_time": 0.15,
-        "total_time": 0.20
-    }
+        "total_time": 0.20,
+    },
 }
 
 EXPECTED_INDEX_RESPONSE = {
     "success": True,
     "documents_indexed": 5,
     "chunks_created": 15,
-    "message": "Successfully indexed 5 documents"
+    "message": "Successfully indexed 5 documents",
 }
 
 # Rate limiting test data

@@ -1,11 +1,20 @@
-from typing import List, Dict, Any, Optional
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from openai import AsyncOpenAI
+import asyncio
 import hashlib
+from typing import Any
+
+from openai import AsyncOpenAI
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
+
 from ..core.config import settings
 from ..models.models import Chunk
-import asyncio
 
 
 class VectorStoreService:
@@ -20,10 +29,7 @@ class VectorStoreService:
     """
 
     def __init__(self):
-        self.client = QdrantClient(
-            host=settings.qdrant_host,
-            port=settings.qdrant_port
-        )
+        self.client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
         self.collection_name = settings.qdrant_collection_name
         self.openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.embedding_model = settings.embedding_model
@@ -40,20 +46,15 @@ class VectorStoreService:
                 # text-embedding-3-large has 3072 dimensions
                 self.client.create_collection(
                     collection_name=self.collection_name,
-                    vectors_config=VectorParams(
-                        size=3072,
-                        distance=Distance.COSINE
-                    )
+                    vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
                 )
-                print(f"Created Qdrant collection: {self.collection_name}")
             else:
-                print(f"Connected to Qdrant collection: {self.collection_name}")
+                pass
 
-        except Exception as e:
-            print(f"Error initializing Qdrant: {e}")
+        except Exception:
             raise
 
-    async def embed_texts(self, texts: List[str]) -> List[List[float]]:
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         """
         Generate embeddings for texts using OpenAI.
 
@@ -65,22 +66,16 @@ class VectorStoreService:
         """
         try:
             response = await self.openai_client.embeddings.create(
-                model=self.embedding_model,
-                input=texts
+                model=self.embedding_model, input=texts
             )
 
-            embeddings = [item.embedding for item in response.data]
-            return embeddings
+            return [item.embedding for item in response.data]
 
-        except Exception as e:
-            print(f"Error generating embeddings: {e}")
+        except Exception:
             raise
 
     async def index_chunks(
-        self,
-        chunks: List[Dict[str, Any]],
-        document_id: str,
-        namespace: str = ""
+        self, chunks: list[dict[str, Any]], document_id: str, namespace: str = ""
     ) -> int:
         """
         Index document chunks into Qdrant.
@@ -108,47 +103,40 @@ class VectorStoreService:
 
         # Create points with metadata
         points = []
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False)):
             chunk_id = self._generate_chunk_id(document_id, i)
 
             metadata = chunk.get("metadata", {}).copy()
-            metadata.update({
-                "document_id": document_id,
-                "chunk_index": i,
-                "text": chunk["text"],  # Store text in metadata for retrieval
-                "token_count": chunk.get("token_count", 0)
-            })
+            metadata.update(
+                {
+                    "document_id": document_id,
+                    "chunk_index": i,
+                    "text": chunk["text"],  # Store text in metadata for retrieval
+                    "token_count": chunk.get("token_count", 0),
+                }
+            )
 
             # Add namespace to metadata if provided
             if namespace:
                 metadata["namespace"] = namespace
 
-            points.append(
-                PointStruct(
-                    id=chunk_id,
-                    vector=embedding,
-                    payload=metadata
-                )
-            )
+            points.append(PointStruct(id=chunk_id, vector=embedding, payload=metadata))
 
         # Batch upsert to Qdrant
         batch_size = 100
         for i in range(0, len(points), batch_size):
-            batch = points[i:i + batch_size]
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=batch
-            )
+            batch = points[i : i + batch_size]
+            self.client.upsert(collection_name=self.collection_name, points=batch)
 
         return len(points)
 
     async def search(
         self,
         query: str,
-        top_k: int = None,
-        metadata_filter: Optional[Dict[str, Any]] = None,
-        namespace: str = ""
-    ) -> List[Chunk]:
+        top_k: int | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+        namespace: str = "",
+    ) -> list[Chunk]:
         """
         Search for similar chunks using semantic search.
 
@@ -180,21 +168,13 @@ class VectorStoreService:
             # Add namespace filter if provided
             if namespace:
                 conditions.append(
-                    FieldCondition(
-                        key="namespace",
-                        match=MatchValue(value=namespace)
-                    )
+                    FieldCondition(key="namespace", match=MatchValue(value=namespace))
                 )
 
             # Add custom metadata filters
             if metadata_filter:
                 for key, value in metadata_filter.items():
-                    conditions.append(
-                        FieldCondition(
-                            key=key,
-                            match=MatchValue(value=value)
-                        )
-                    )
+                    conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
 
             if conditions:
                 query_filter = Filter(must=conditions)
@@ -205,7 +185,7 @@ class VectorStoreService:
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
                 limit=top_k,
-                query_filter=query_filter
+                query_filter=query_filter,
             )
 
             # Convert to Chunk objects
@@ -214,27 +194,21 @@ class VectorStoreService:
                 payload = result.payload.copy()
                 text = payload.pop("text", "")
 
-                chunk = Chunk(
-                    id=str(result.id),
-                    text=text,
-                    score=result.score,
-                    metadata=payload
-                )
+                chunk = Chunk(id=str(result.id), text=text, score=result.score, metadata=payload)
                 chunks.append(chunk)
 
             return chunks
 
-        except Exception as e:
-            print(f"Error searching Qdrant: {e}")
+        except Exception:
             return []
 
     async def search_multiple_queries(
         self,
-        queries: List[str],
-        top_k: int = None,
-        metadata_filter: Optional[Dict[str, Any]] = None,
-        namespace: str = ""
-    ) -> List[Chunk]:
+        queries: list[str],
+        top_k: int | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+        namespace: str = "",
+    ) -> list[Chunk]:
         """
         Search with multiple queries in parallel and combine results.
 
@@ -246,10 +220,7 @@ class VectorStoreService:
             return []
 
         # Search all queries in parallel
-        search_tasks = [
-            self.search(query, top_k, metadata_filter, namespace)
-            for query in queries
-        ]
+        search_tasks = [self.search(query, top_k, metadata_filter, namespace) for query in queries]
 
         results = await asyncio.gather(*search_tasks)
 
@@ -270,11 +241,7 @@ class VectorStoreService:
         top_k = top_k or settings.top_k_retrieval
         return combined_chunks[:top_k]
 
-    async def delete_document(
-        self,
-        document_id: str,
-        namespace: str = ""
-    ) -> bool:
+    async def delete_document(self, document_id: str, namespace: str = "") -> bool:
         """
         Delete all chunks for a document.
 
@@ -292,32 +259,20 @@ class VectorStoreService:
 
         try:
             # Build filter for deletion
-            conditions = [
-                FieldCondition(
-                    key="document_id",
-                    match=MatchValue(value=document_id)
-                )
-            ]
+            conditions = [FieldCondition(key="document_id", match=MatchValue(value=document_id))]
 
             if namespace:
                 conditions.append(
-                    FieldCondition(
-                        key="namespace",
-                        match=MatchValue(value=namespace)
-                    )
+                    FieldCondition(key="namespace", match=MatchValue(value=namespace))
                 )
 
             delete_filter = Filter(must=conditions)
 
             # Delete by filter
-            self.client.delete(
-                collection_name=self.collection_name,
-                points_selector=delete_filter
-            )
+            self.client.delete(collection_name=self.collection_name, points_selector=delete_filter)
             return True
 
-        except Exception as e:
-            print(f"Error deleting document: {e}")
+        except Exception:
             return False
 
     def _generate_chunk_id(self, document_id: str, chunk_index: int) -> str:
@@ -325,7 +280,7 @@ class VectorStoreService:
         content = f"{document_id}_{chunk_index}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get collection statistics."""
         try:
             self.client.get_collection(self.collection_name)
@@ -335,20 +290,22 @@ class VectorStoreService:
         try:
             # Use raw HTTP request to avoid Pydantic validation errors
             import httpx
-            response = httpx.get(f"http://{self.client._client.host}:{self.client._client.port}/collections/{self.collection_name}")
+
+            response = httpx.get(
+                f"http://{self.client._client.host}:{self.client._client.port}/collections/{self.collection_name}"
+            )
             if response.status_code == 200:
                 data = response.json()
                 result = data.get("result", {})
                 return {
                     "total_vectors": result.get("points_count", 0),
-                    "dimension": result.get("config", {}).get("params", {}).get("vectors", {}).get("size", 0),
-                    "status": result.get("status", "unknown")
+                    "dimension": result.get("config", {})
+                    .get("params", {})
+                    .get("vectors", {})
+                    .get("size", 0),
+                    "status": result.get("status", "unknown"),
                 }
             return {}
-        except Exception as e:
+        except Exception:
             # Silently fail for stats endpoint
-            return {
-                "total_vectors": 0,
-                "dimension": 0,
-                "status": "unknown"
-            }
+            return {"total_vectors": 0, "dimension": 0, "status": "unknown"}

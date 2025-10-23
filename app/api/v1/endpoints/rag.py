@@ -6,10 +6,10 @@ Provides the main RAG query interface with full pipeline support.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.logging import get_logger
-from app.core.observability import get_observability_manager, ObservabilityManager
-from app.models.models import QueryRequest, QueryResponse
 from app.api.deps import get_rag_service
+from app.core.logging import get_logger
+from app.core.observability import ObservabilityManager, get_observability_manager
+from app.models.models import QueryRequest, QueryResponse
 from app.services.rag_service import RAGService
 
 logger = get_logger(__name__)
@@ -22,12 +22,12 @@ router = APIRouter(tags=["RAG"])
     response_model=QueryResponse,
     status_code=status.HTTP_200_OK,
     summary="Query the RAG system",
-    description="Execute a RAG query with the full production pipeline"
+    description="Execute a RAG query with the full production pipeline",
 )
 async def query(
     request: QueryRequest,
     rag_service: RAGService = Depends(get_rag_service),
-    obs_manager: ObservabilityManager = Depends(get_observability_manager)
+    obs_manager: ObservabilityManager = Depends(get_observability_manager),
 ) -> QueryResponse:
     """
     Query the RAG system.
@@ -66,12 +66,8 @@ async def query(
         logger.info("Processing RAG query", query=request.query[:100])
 
         # Create observability trace if enabled
-        trace = None
         if obs_manager.is_enabled():
-            trace = obs_manager.create_trace(
-                name="RAG Query",
-                metadata={"query": request.query[:100]}
-            )
+            obs_manager.create_trace(name="RAG Query", metadata={"query": request.query[:100]})
 
         # Execute query
         response = await rag_service.query(request)
@@ -79,7 +75,7 @@ async def query(
         logger.info(
             "RAG query completed successfully",
             query=request.query[:100],
-            num_sources=len(response.sources) if response.sources else 0
+            num_sources=len(response.sources) if response.sources else 0,
         )
 
         return response
@@ -87,6 +83,5 @@ async def query(
     except Exception as e:
         logger.error("RAG query failed", query=request.query[:100], error=str(e))
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Query failed: {str(e)}"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {e!s}"
+        ) from e
