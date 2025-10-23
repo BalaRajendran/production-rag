@@ -1,233 +1,156 @@
-from fastapi import FastAPI, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
+"""
+Production RAG Framework - Main Application.
+
+FastAPI application with production-grade architecture including:
+- API versioning (/api/v1)
+- Structured logging with correlation IDs
+- Redis-backed rate limiting
+- Langfuse observability (optional)
+- Global error handling
+- Request timing and monitoring
+"""
+
 from contextlib import asynccontextmanager
 import uvicorn
 
-from .core.config import settings
-from .models.models import (
-    QueryRequest, QueryResponse,
-    IndexRequest, IndexResponse,
-    HealthResponse
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import get_settings
+from app.core.logging import setup_logging, get_logger
+from app.core.observability import get_observability_manager
+from app.middleware import (
+    TimingMiddleware,
+    CorrelationIDMiddleware,
+    LoggingMiddleware,
+    ErrorHandlerMiddleware,
+    RateLimitMiddleware,
 )
-from .services.rag_service import RAGService
+from app.api.v1 import api_router
+from app.api.deps import get_rag_service
 
 
-# Initialize RAG service
-rag_service = RAGService()
+# Initialize settings and logging
+settings = get_settings()
+setup_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize services on startup."""
-    print("Initializing Production RAG Framework...")
+    """
+    Application lifespan manager.
+
+    Handles startup and shutdown events:
+    - Startup: Initialize RAG service, log configuration
+    - Shutdown: Flush observability traces, cleanup resources
+    """
+    # Startup
+    logger.info(
+        "Starting Production RAG Framework",
+        environment=settings.app.environment,
+        version=settings.app.app_version,
+        debug=settings.app.debug
+    )
+
+    # Initialize RAG service
+    rag_service = get_rag_service()
     await rag_service.initialize()
-    print("RAG Framework ready!!")
+    logger.info("RAG service initialized successfully")
+
+    # Log feature flags
+    logger.info(
+        "Feature flags",
+        rate_limiting=settings.rate_limit.rate_limit_enabled,
+        langfuse=settings.observability.langfuse_enabled,
+        metrics=settings.observability.enable_metrics
+    )
+
     yield
-    print("Shutting down RAG Framework...")
+
+    # Shutdown
+    logger.info("Shutting down Production RAG Framework")
+
+    # Flush observability traces
+    obs_manager = get_observability_manager()
+    obs_manager.shutdown()
+
+    logger.info("Application shut down successfully")
 
 
-# Create FastAPI app
+# Create FastAPI application
 app = FastAPI(
-    title="Production RAG Framework",
+    title=settings.app.app_name,
     description="Production-grade RAG system with query generation, reranking, and smart routing",
-    version="1.0.0",
-    lifespan=lifespan
+    version=settings.app.app_version,
+    lifespan=lifespan,
+    debug=settings.app.debug,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
-# Add CORS middleware
+
+# Add middleware in correct order (reverse of execution order)
+# Middleware executes in LIFO order: last added = first executed
+
+# 1. CORS (should be last so it handles all responses)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.app.cors_origins,
+    allow_credentials=settings.app.cors_credentials,
+    allow_methods=settings.app.cors_methods,
+    allow_headers=settings.app.cors_headers,
+)
+
+# 2. Rate limiting
+app.add_middleware(RateLimitMiddleware)
+
+# 3. Error handling (catch all errors)
+app.add_middleware(ErrorHandlerMiddleware)
+
+# 4. Request/response logging
+app.add_middleware(LoggingMiddleware)
+
+# 5. Correlation ID (early so all logs have it)
+app.add_middleware(CorrelationIDMiddleware)
+
+# 6. Timing (first in execution, last in response)
+app.add_middleware(TimingMiddleware)
+
+
+# Include API v1 router
+app.include_router(
+    api_router,
+    prefix=f"{settings.app.api_prefix}/v1"
 )
 
 
+# Root endpoint (outside versioning)
 @app.get("/", tags=["Root"])
 async def root():
-    """Root endpoint."""
+    """
+    Root endpoint.
+
+    Returns:
+        Basic API information and links
+    """
     return {
-        "message": "Production RAG Framework",
-        "version": "1.0.0",
+        "name": settings.app.app_name,
+        "version": settings.app.app_version,
+        "environment": settings.app.environment,
         "docs": "/docs",
-        "health": "/health"
+        "health": f"{settings.app.api_prefix}/v1/health",
+        "api_v1": f"{settings.app.api_prefix}/v1"
     }
 
 
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
-async def health_check():
-    """
-    Health check endpoint.
-
-    Returns system status and service connectivity.
-    """
-    try:
-        # Check Pinecone connection
-        pinecone_connected = False
-        try:
-            stats = await rag_service.get_stats()
-            pinecone_connected = stats is not None
-        except Exception:
-            pass
-
-        return HealthResponse(
-            status="healthy" if pinecone_connected else "degraded",
-            pinecone_connected=pinecone_connected,
-            openai_configured=bool(settings.openai_api_key),
-            cohere_configured=bool(settings.cohere_api_key)
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Health check failed: {str(e)}"
-        )
-
-
-@app.post("/query", response_model=QueryResponse, tags=["RAG"])
-async def query(request: QueryRequest):
-    """
-    Query the RAG system.
-
-    This endpoint implements the full production RAG pipeline:
-
-    1. **Query Routing** - Determines the best way to handle the query
-    2. **Query Generation** - Creates multiple query variants for better coverage
-    3. **Parallel Retrieval** - Searches with all queries simultaneously
-    4. **Reranking** - Reranks results using Cohere (50 → 15 chunks)
-    5. **Answer Generation** - Uses LLM to generate final answer with metadata
-
-    Args:
-        request: Query request with question and optional conversation history
-
-    Returns:
-        QueryResponse with answer, sources, and metadata
-
-    Example:
-        ```json
-        {
-            "query": "What are the benefits of exercise?",
-            "conversation_history": [
-                {"role": "user", "content": "Tell me about health"},
-                {"role": "assistant", "content": "Health is important..."}
-            ]
-        }
-        ```
-    """
-    try:
-        response = await rag_service.query(request)
-        return response
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Query failed: {str(e)}"
-        )
-
-
-@app.post("/index", response_model=IndexResponse, tags=["Document Management"])
-async def index_documents(request: IndexRequest):
-    """
-    Index documents into the RAG system.
-
-    This endpoint:
-    1. **Chunks documents** using smart chunking strategy
-    2. **Injects metadata** into chunks for better context
-    3. **Generates embeddings** using text-embedding-3-large
-    4. **Stores in Pinecone** for fast retrieval
-
-    Args:
-        request: Index request with documents to add
-
-    Returns:
-        IndexResponse with indexing status
-
-    Example:
-        ```json
-        {
-            "documents": [
-                {
-                    "id": "doc-1",
-                    "content": "Document content here...",
-                    "metadata": {
-                        "title": "My Document",
-                        "author": "John Doe",
-                        "source": "example.com"
-                    }
-                }
-            ]
-        }
-        ```
-    """
-    try:
-        response = await rag_service.index_documents(request)
-        return response
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Indexing failed: {str(e)}"
-        )
-
-
-@app.delete("/documents/{document_id}", tags=["Document Management"])
-async def delete_document(document_id: str):
-    """
-    Delete a document and all its chunks.
-
-    Args:
-        document_id: Unique document identifier
-
-    Returns:
-        Deletion status
-    """
-    try:
-        success = await rag_service.delete_document(document_id)
-
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {document_id} not found"
-            )
-
-        return {
-            "success": True,
-            "message": f"Document {document_id} deleted successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Deletion failed: {str(e)}"
-        )
-
-
-@app.get("/stats", tags=["Monitoring"])
-async def get_stats():
-    """
-    Get vector database statistics.
-
-    Returns:
-        Database statistics including vector count and dimensions
-    """
-    try:
-        stats = await rag_service.get_stats()
-        return stats
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get stats: {str(e)}"
-        )
-
-
+# Run application (for development)
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
-        host=settings.api_host,
-        port=settings.api_port,
-        reload=True
+        "app.main:app",
+        host=settings.app.api_host,
+        port=settings.app.api_port,
+        reload=settings.app.debug,
+        log_level=settings.observability.log_level.lower()
     )

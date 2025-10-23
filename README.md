@@ -1,6 +1,8 @@
 # Production RAG Framework
 
-A production-grade RAG (Retrieval-Augmented Generation) framework built with FastAPI and Pinecone, implementing best practices from processing 5M+ documents.
+A production-grade RAG (Retrieval-Augmented Generation) framework built with FastAPI and Qdrant, implementing best practices from processing 5M+ documents.
+
+> **🎉 Version 1.1.0** - Updated with restructured codebase, hot reload support, and Qdrant vector database!
 
 ## Features
 
@@ -52,7 +54,7 @@ This framework implements all key learnings from production RAG systems:
        ▼
 ┌─────────────────┐
 │ Vector Search   │  → Parallel search with all queries
-│   (Pinecone)    │
+│   (Qdrant)      │
 └──────┬──────────┘
        │
        ▼
@@ -75,26 +77,46 @@ This framework implements all key learnings from production RAG systems:
 
 ## Tech Stack
 
-- **Framework**: FastAPI
-- **Vector DB**: Pinecone
+- **Framework**: FastAPI 0.115.0
+- **Vector DB**: Qdrant 1.15.5 (self-hosted)
 - **Embeddings**: OpenAI text-embedding-3-large
 - **Reranker**: Cohere rerank-english-v3.0
 - **LLM**: GPT-4 Turbo
 - **Chunking**: Custom implementation with tiktoken
 
-## Setup
+## Project Structure (v1.1.0)
 
-### 1. Install dependencies with uv
-
-```bash
-# Install uv if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install dependencies
-uv pip install -e .
+```
+production-rag/
+├── app/                        # Main application package
+│   ├── api/                   # API routes (ready for expansion)
+│   ├── core/                  # Configuration
+│   │   └── config.py         # Settings from environment
+│   ├── models/                # Pydantic models
+│   │   └── models.py         # Request/Response schemas
+│   ├── services/              # Business logic
+│   │   ├── rag_service.py    # Main RAG orchestrator
+│   │   ├── vector_store.py   # Qdrant operations
+│   │   ├── query_generation.py
+│   │   ├── reranker.py
+│   │   ├── query_router.py
+│   │   ├── llm_service.py
+│   │   └── chunking.py
+│   └── main.py               # FastAPI application
+├── frontend/                  # Frontend (optional)
+├── tests/                     # Test suite
+├── scripts/                   # Utility scripts
+├── docker-compose.yml         # Docker Compose config
+├── Dockerfile                 # Docker build config
+├── requirements.txt           # Python dependencies
+└── .env                       # Environment variables
 ```
 
-### 2. Configure environment variables
+See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed documentation.
+
+## Quick Start (Docker - Recommended)
+
+### 1. Configure environment variables
 
 Copy `.env.example` to `.env` and fill in your API keys:
 
@@ -108,28 +130,72 @@ Required environment variables:
 # OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Pinecone Configuration
-PINECONE_API_KEY=your_pinecone_api_key_here
-PINECONE_ENVIRONMENT=us-east-1  # or your preferred region
-PINECONE_INDEX_NAME=rag-index
+# Qdrant Configuration (auto-configured for Docker)
+QDRANT_HOST=qdrant
+QDRANT_PORT=6333
+QDRANT_COLLECTION_NAME=rag_collection
 
 # Cohere Configuration (for reranking)
 COHERE_API_KEY=your_cohere_api_key_here
 ```
 
+### 2. Start services with Docker Compose
+
+```bash
+# Start all services (Qdrant + RAG API)
+docker compose up -d
+
+# View logs
+docker compose logs -f rag-api
+
+# Check status
+docker compose ps
+```
+
+The API will be available at:
+- **API**: `http://localhost:8000`
+- **Interactive docs**: `http://localhost:8000/docs`
+- **Qdrant UI**: `http://localhost:6333/dashboard`
+
+### 3. Hot Reload Development
+
+Thanks to volume mounts, you can edit code in the `app/` directory and changes will automatically reload without rebuilding:
+
+```bash
+# Edit any file in app/
+vim app/services/rag_service.py
+
+# Changes automatically reload in container
+# No docker compose up --build needed!
+```
+
+## Local Development (Without Docker)
+
+### 1. Install dependencies
+
+```bash
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Start Qdrant locally
+
+```bash
+# Using Docker
+docker run -p 6333:6333 qdrant/qdrant:latest
+
+# Or download from https://qdrant.tech/
+```
+
 ### 3. Run the server
 
 ```bash
-# Development mode with auto-reload
-uvicorn main:app --reload
-
-# Or using Python directly
-python main.py
+# Development mode
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-
-The API will be available at `http://localhost:8000`
-
-Interactive docs at `http://localhost:8000/docs`
 
 ## Usage
 
